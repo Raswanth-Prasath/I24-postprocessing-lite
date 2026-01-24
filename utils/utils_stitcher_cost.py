@@ -11,7 +11,7 @@ from i24_logger.log_writer import catch_critical
 from utils.misc import calc_fit_select, calc_fit_select_ransac
 import statsmodels.api as sm
 import warnings
-warnings.filterwarnings('error')
+warnings.filterwarnings('ignore')
 
 dt=0.04
 

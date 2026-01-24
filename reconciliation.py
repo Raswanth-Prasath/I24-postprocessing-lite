@@ -31,32 +31,39 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(o)
     
     
-def reconcile_single_trajectory(reconciliation_args, combined_trajectory, reconciled_queue) -> None:
+def reconcile_single_trajectory(reconciliation_args, combined_trajectory, reconciled_queue, resample_dt=0.04) -> None:
     """
     Resample and reconcile a single trajectory, and write the result to a queue
-    :param next_to_reconcile: a trajectory document
-    :return:
+    :param reconciliation_args: reconciliation parameters dictionary
+    :param combined_trajectory: a combined trajectory document
+    :param reconciled_queue: queue to put reconciled trajectory results
+    :param resample_dt: resample time interval in seconds (default 0.04s = 25Hz)
+    :return: None
     """
-    
-    rec_worker_logger = log_writer.logger 
+
+    rec_worker_logger = log_writer.logger
     rec_worker_logger.set_name("rec_worker")
     setattr(rec_worker_logger, "_default_logger_extra",  {})
 
-    resampled_trajectory = resample(combined_trajectory, dt=0.04)
+    resampled_trajectory = resample(combined_trajectory, dt=resample_dt)
     if "post_flag" in resampled_trajectory:
-        # skip reconciliation
+        # skip reconciliation for low confidence trajectories
         rec_worker_logger.info("+++ Flag as low conf, skip reconciliation", extra = None)
+        # Still put it in queue with a marker so we don't lose the trajectory
+        reconciled_queue.put(resampled_trajectory)
 
     else:
         try:
-            # finished_trajectory = rectify_2d(resampled_trajectory, reg = "l1", **reconciliation_args)  
-            finished_trajectory = opt2_l1_constr(resampled_trajectory, **reconciliation_args)  
-            # finished_trajectory = opt2(resampled_trajectory, **reconciliation_args)  
+            # finished_trajectory = rectify_2d(resampled_trajectory, reg = "l1", **reconciliation_args)
+            finished_trajectory = opt2_l1_constr(resampled_trajectory, **reconciliation_args)
+            # finished_trajectory = opt2(resampled_trajectory, **reconciliation_args)
             reconciled_queue.put(finished_trajectory)
             # rec_worker_logger.debug("*** Reconciled a trajectory, duration: {:.2f}s, length: {}".format(finished_trajectory["last_timestamp"]-finished_trajectory["first_timestamp"], len(finished_trajectory["timestamp"])), extra = None)
-        
+
         except Exception as e:
             rec_worker_logger.info("+++ Flag as {}, skip reconciliation".format(str(e)), extra = None)
+            # Put resampled trajectory in queue even if reconciliation failed
+            reconciled_queue.put(resampled_trajectory)
 
 
 
@@ -70,30 +77,30 @@ def reconciliation_pool(parameters, db_param, stitched_trajectory_queue: multipr
     """
 
     n_proc = min(multiprocessing.cpu_count(), parameters["worker_size"])
-    worker_pool = Pool(processes= n_proc)
+    worker_pool = Pool(processes=n_proc)
 
-    
     # parameters
-    reconciliation_args=parameters["reconciliation_args"]
-    
+    reconciliation_args = parameters["reconciliation_args"]
+    resample_dt = parameters.get("resample_dt", 0.04)  # Default to 0.04s (25Hz) if not specified
+
     rec_parent_logger = log_writer.logger
     rec_parent_logger.set_name("reconciliation")
-    setattr(rec_parent_logger, "_default_logger_extra",  {})
+    setattr(rec_parent_logger, "_default_logger_extra", {})
 
     # wait to get raw collection name
-    while parameters["raw_collection"]=="":
+    while parameters["raw_collection"] == "":
         time.sleep(1)
-    
-    rec_parent_logger.info("** Reconciliation pool starts. Pool size: {}".format(n_proc), extra = None)
+
+    rec_parent_logger.info("** Reconciliation pool starts. Pool size: {}".format(n_proc), extra=None)
     TIMEOUT = parameters["reconciliation_pool_timeout"]
-    
+
     cntr = 0
     while True:
         try:
             try:
-                traj_docs = stitched_trajectory_queue.get(timeout = TIMEOUT) #20sec
+                traj_docs = stitched_trajectory_queue.get(timeout=TIMEOUT)  # 20sec
                 cntr += 1
-            except queue.Empty: 
+            except queue.Empty:
                 rec_parent_logger.warning("Reconciliation pool is timed out after {}s. Close the reconciliation pool.".format(TIMEOUT))
                 worker_pool.close()
                 break
@@ -101,17 +108,16 @@ def reconciliation_pool(parameters, db_param, stitched_trajectory_queue: multipr
                 combined_trajectory = combine_fragments(traj_docs)
             else:
                 combined_trajectory = combine_fragments([traj_docs])
-            # combined_trajectory = combine_fragments(traj_docs)  
-            worker_pool.apply_async(reconcile_single_trajectory, (reconciliation_args, combined_trajectory, reconciled_queue, ))
+            # Pass resample_dt parameter to worker
+            worker_pool.apply_async(reconcile_single_trajectory, (reconciliation_args, combined_trajectory, reconciled_queue, resample_dt))
 
-        except Exception as e: # other exception
+        except Exception as e:  # other exception
             rec_parent_logger.warning("{}, Close the pool".format(e))
-            worker_pool.close() # wait until all processes finish their task
+            worker_pool.close()  # wait until all processes finish their task
             break
-            
-            
-        
-    # Finish up  
+
+
+    # Finish up
     worker_pool.join()
     rec_parent_logger.info("Joined the pool.")
     
@@ -120,69 +126,89 @@ def reconciliation_pool(parameters, db_param, stitched_trajectory_queue: multipr
 
 
 def write_reconciled_to_db(parameters, db_param, reconciled_queue):
-    
+
     reconciled_writer = log_writer.logger
     reconciled_writer.set_name("reconciliation_writer")
-    
+
     TIMEOUT = parameters["reconciliation_writer_timeout"]
     cntr = 0
+    duplicates_skipped = 0
     HB = parameters["log_heartbeat"]
     begin = time.time()
 
-    # in case of restart, remove the last "]" in json
     output_filename = parameters["reconciled_collection"]+".json"
     file_exists = os.path.exists(output_filename)
     append_flag = file_exists and os.stat(output_filename).st_size > 0
-    
+
+    # Track written IDs to prevent duplicates (load existing if appending)
+    written_ids = set()
     if append_flag:
+        # Read existing IDs from the file to avoid duplicates
+        try:
+            with open(output_filename, 'r') as f:
+                existing_data = json.load(f)
+                written_ids = {record.get('_id') for record in existing_data if record.get('_id')}
+            reconciled_writer.info(f"Loaded {len(written_ids)} existing IDs for deduplication")
+        except (json.JSONDecodeError, Exception) as e:
+            reconciled_writer.warning(f"Could not load existing IDs: {e}. Starting fresh.")
+            append_flag = False
+            written_ids = set()
+
+    if append_flag:
+        # Remove the closing bracket to append more records
         with open(output_filename, 'rb+') as fh:
             fh.seek(-1, os.SEEK_END)
             fh.truncate()
-        print("removed last character")
+        reconciled_writer.info("Removed last character from existing file for append mode")
 
-    # Write to db
-    while True:
+    # Open output file once, keep it open for all writes
+    file_mode = 'a' if append_flag else 'w'
+    output_file = open(output_filename, file_mode)
+    first_write = not append_flag  # False when appending to ensure comma before first new record
 
-        try:
-            record = reconciled_queue.get(timeout = TIMEOUT)
-        except queue.Empty:
-            reconciled_writer.warning("Getting from reconciled_queue reaches timeout {} sec.".format(TIMEOUT))
-            break
+    try:
+        # Write opening bracket if this is a new file
+        if file_mode == 'w':
+            output_file.write("[")
 
-        # TODO: write one
-        file_exists = os.path.exists(output_filename)
-        append_flag = file_exists and os.stat(output_filename).st_size > 0
+        # Write to db
+        while True:
+            try:
+                record = reconciled_queue.get(timeout=TIMEOUT)
+            except queue.Empty:
+                reconciled_writer.warning("Getting from reconciled_queue reaches timeout {} sec.".format(TIMEOUT))
+                break
+            except (EOFError, ConnectionResetError, BrokenPipeError) as e:
+                reconciled_writer.warning(f"Connection error while reading queue: {e}")
+                break
 
-        # Open the output file for writing or appending
-        with open(output_filename, 'a' if file_exists else 'w') as output_file:
-            # If the file doesn't exist or is empty, write the start of the JSON array
-            if not append_flag:
-                output_file.write("[")
+            # Skip duplicates
+            record_id = record.get('_id')
+            if record_id in written_ids:
+                duplicates_skipped += 1
+                continue
+            written_ids.add(record_id)
 
-            # Check if the file already had data and adjust the comma if needed
-            first_item = True if not file_exists or os.stat(output_filename).st_size == 0 else False
+            # Write comma before each record except the first one
+            if not first_write:
+                output_file.write(",")
+            first_write = False
 
-            if not first_item:
-                output_file.write(",")  # Separate items with commas except for the first one
-            else:
-                first_item = False
-            
             # Write each record (dictionary) to the output file using the custom encoder
             json.dump(record, output_file, cls=DecimalEncoder)
+            output_file.flush()  # Flush to ensure data is written
             cntr += 1
-            output_file.write("]")  # Close the JSON array
-        
 
-        if time.time()-begin > HB:
-            begin = time.time()
-            
-            # TODO: progress update
-            reconciled_writer.info(f"Writing {cntr} documents in this batch")
-            
+            if time.time() - begin > HB:
+                begin = time.time()
+                reconciled_writer.info(f"Written {cntr} documents, skipped {duplicates_skipped} duplicates")
 
-    
-    # Safely close the mongodb client connection
-    reconciled_writer.warning(f"JSON writer closed. Current count: {cntr}. Exit")
+    finally:
+        # Properly close the JSON array and file
+        output_file.write("]")
+        output_file.close()
+        reconciled_writer.info(f"JSON writer closed. Total written: {cntr}, duplicates skipped: {duplicates_skipped}. Exit")
+
     return
 
 

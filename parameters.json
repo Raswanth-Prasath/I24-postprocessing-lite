@@ -7,9 +7,9 @@
 	"meta_database": "meta",
 	
 	"transform_postproc": 0,
-    "gt_collection": "ICCV_gt3_cleaned",
-    "raw_collection": "iccv_raw1",
-	"reconciled_collection": "ICCV_raw1__delete",
+    "gt_collection": "GT_i",
+    "raw_collection": "RAW_i",
+	"reconciled_collection": "REC_i",
     "temp_collection": "",
 	
 	"compute_node_list":[1],
@@ -44,7 +44,13 @@
         "residual_threshold_y": 1,
         "conf_threshold": 0.1
     },
-    
+
+    "cost_function": {
+        "type": "siamese",
+        "checkpoint_path": "Siamese-Network/outputs/best_accuracy.pth",
+        "device": "cuda"
+    },
+
     "merge_thresh": 0,
     "conf_threshold": 0.2,
     

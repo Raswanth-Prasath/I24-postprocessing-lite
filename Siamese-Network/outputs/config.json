@@ -1,0 +1,31 @@
+{
+  "dataset_names": [
+    "i",
+    "ii",
+    "iii"
+  ],
+  "batch_size": 32,
+  "num_epochs": 50,
+  "learning_rate": 0.001,
+  "weight_decay": 1e-05,
+  "train_val_split": 0.8,
+  "model": {
+    "input_size": 4,
+    "hidden_size": 128,
+    "num_layers": 2,
+    "dropout": 0.3,
+    "bidirectional": true,
+    "similarity_hidden_dim": 64,
+    "endpoint_feature_dim": 4,
+    "use_endpoint_features": true
+  },
+  "use_enhanced_dataset": true,
+  "loss": {
+    "margin": 2.0,
+    "alpha": 0.5
+  },
+  "scheduler": {
+    "step_size": 15,
+    "gamma": 0.5
+  }
+}

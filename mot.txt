@@ -1,0 +1,112 @@
+import motmetrics as mm
+import numpy as np
+import pandas as pd
+
+# File paths
+GT_FILE = './mot_output/gt.txt'
+REC_FILE = './mot_output/rec_trackeroutput.txt'
+RAW_FILE = './mot_output/raw_trackeroutput.txt'
+
+# IOU threshold
+IOU_THRESHOLD = 0.3
+
+def motMetricsEnhancedCalculator(gt_source, t_source, name):
+    # Load ground truth and tracker output
+    gt = np.loadtxt(gt_source, delimiter=',')
+    t = np.loadtxt(t_source, delimiter=',')
+    
+    # Create accumulator
+    acc = mm.MOTAccumulator(auto_id=True)
+    
+    # Process each frame
+    for frame in range(int(gt[:,0].max())):
+        frame += 1  # MOT16 frames start at 1
+        gt_dets = gt[gt[:,0] == frame, 1:6]  # id, bb_left, bb_top, width, height
+        t_dets = t[t[:,0] == frame, 1:6]
+        
+        # Compute IOU distance matrix
+        C = mm.distances.iou_matrix(gt_dets[:,1:], t_dets[:,1:], max_iou=IOU_THRESHOLD)
+        
+        # Update accumulator
+        acc.update(
+            gt_dets[:,0].astype('int').tolist(),  # Ground truth IDs
+            t_dets[:,0].astype('int').tolist(),   # Tracker IDs
+            C
+        )
+    
+    # Compute object-level FM and IDsw
+    events = acc.events
+    obj_switches = set()  # Ground truth objects with at least one ID switch
+    obj_fragments = set()  # Ground truth objects with at least one fragmentation
+    
+    # Group events by ground truth ID
+    for _, frame_events in events.groupby('FrameId'):
+        for _, event in frame_events.iterrows():
+            gt_id = event['OId']  # Ground truth ID
+            if event['Type'] == 'SWITCH':
+                obj_switches.add(gt_id)
+            elif event['Type'] == 'TRANSFER':  # Fragmentation event in motmetrics
+                obj_fragments.add(gt_id)
+    
+    # Compute metrics
+    mh = mm.metrics.create()
+    summary = mh.compute(
+        acc,
+        metrics=['precision', 'recall', 'mota', 'motp', 'num_objects',
+                 'mostly_tracked', 'partially_tracked', 'mostly_lost',
+                 'num_false_positives', 'num_misses'],
+        name=name
+    )
+    
+    # Add object-level FM and IDsw
+    summary['num_switches'] = len(obj_switches)
+    summary['num_fragmentations'] = len(obj_fragments)
+    
+    # Transform MOTP
+    summary['motp'] = (1 - summary['motp'])
+    
+    # Compute tracker trajectories
+    tracker_trajs = len(np.unique(t[:,1]))  # Unique tracker IDs
+    summary['no_trajs'] = tracker_trajs
+    
+    # Compute additional metrics
+    summary['fgmt_gt'] = summary['num_fragmentations'] / summary['no_trajs'] if summary['no_trajs'][0] > 0 else 0
+    summary['sw_gt'] = summary['num_switches'] / summary['no_trajs'] if summary['no_trajs'][0] > 0 else 0
+    
+    # Render summary
+    strsummary = mm.io.render_summary(
+        summary,
+        formatters={
+            'mota': '{:.3f}'.format,
+            'motp': '{:.3f}'.format,
+            'recall': '{:.2f}'.format,
+            'precision': '{:.2f}'.format,
+            'fgmt_gt': '{:.2f}'.format,
+            'sw_gt': '{:.2f}'.format,
+            'no_trajs': '{:.0f}'.format
+        },
+        namemap={
+            'recall': 'Rcll',
+            'precision': 'Prcn',
+            'num_objects': 'GT',
+            'mostly_tracked': 'MT',
+            'partially_tracked': 'PT',
+            'mostly_lost': 'ML',
+            'num_false_positives': 'FP',
+            'num_misses': 'FN',
+            'num_switches': 'IDsw',
+            'num_fragmentations': 'FM',
+            'mota': 'MOTA',
+            'motp': 'MOTP',
+            'fgmt_gt': 'Fgmt/GT',
+            'sw_gt': 'Sw/GT',
+            'no_trajs': 'No. trajs'
+        }
+    )
+    print(f"\nResults for {name}:\n{strsummary}")
+    return summary
+
+# Evaluate REC and RAW against GT
+raw_summary = motMetricsEnhancedCalculator(GT_FILE, RAW_FILE, 'RAW')
+rec_summary = motMetricsEnhancedCalculator(GT_FILE, REC_FILE, 'REC')
+gt_summary = motMetricsEnhancedCalculator(GT_FILE, GT_FILE, 'GT')

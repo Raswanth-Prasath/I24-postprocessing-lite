@@ -150,7 +150,7 @@ def resample(car, dt=0.04, fillnan=False):
     # resample to 100hz
     # to avoid the bias introduced by "floor" resample..., first upsample to 10ms, and then downsample to 25hz,
     # this method does not "snap" the timestamps to floor
-    df=df.resample('10L').mean().interpolate(method="linear").resample(freq).asfreq()
+    df=df.resample('10ms').mean().interpolate(method="linear").resample(freq).asfreq()
     df.index = df.index.values.astype('datetime64[ns]').astype('int64')*1e-9
     # df=df.groupby(df.index.floor('0.04S')).mean().resample('0.04S').asfreq()
 

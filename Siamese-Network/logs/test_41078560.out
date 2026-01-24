@@ -1,0 +1,136 @@
+========================================================================
+SIAMESE NETWORK TESTING JOB STARTED
+========================================================================
+Job ID: 41078560
+Node: sg050
+Start Time: Mon Dec  1 18:48:00 MST 2025
+========================================================================
+Using custom Python: /home/raswanth/.conda/envs/i24/bin/python
+Python version:
+Python 3.10.0
+
+PyTorch check:
+PyTorch version: 2.8.0+cu126
+CUDA available: True
+
+✓ Created logs/ and outputs/ directories
+
+========================================================================
+TEST 1: Model Architecture
+========================================================================
+Testing Siamese Network Architecture...
+
+Model Architecture:
+SiameseTrajectoryNetwork(
+  (encoder): TrajectoryEncoder(
+    (lstm): LSTM(4, 128, num_layers=2, batch_first=True, dropout=0.2, bidirectional=True)
+    (layer_norm): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+  )
+  (similarity_head): Sequential(
+    (0): Linear(in_features=512, out_features=64, bias=True)
+    (1): ReLU()
+    (2): Dropout(p=0.2, inplace=False)
+    (3): Linear(in_features=64, out_features=32, bias=True)
+    (4): ReLU()
+    (5): Dropout(p=0.2, inplace=False)
+    (6): Linear(in_features=32, out_features=1, bias=True)
+    (7): Sigmoid()
+  )
+)
+
+Total parameters: 567,937
+
+Forward pass test:
+  Input A shape: torch.Size([8, 20, 4])
+  Input B shape: torch.Size([8, 15, 4])
+  Embedding A shape: torch.Size([8, 256])
+  Embedding B shape: torch.Size([8, 256])
+  Similarity shape: torch.Size([8, 1])
+  Similarity values: tensor([0.4926, 0.4899, 0.5017, 0.4814, 0.4536, 0.4378, 0.4492, 0.4252],
+       grad_fn=<SqueezeBackward0>)
+
+Loss test:
+  BCE Loss: 0.7556
+  Contrastive Loss: 16.2574
+  Total Loss: 8.5065
+
+✓ Model architecture test passed!
+✓ Model architecture test PASSED
+
+========================================================================
+TEST 2: Dataset Loader
+========================================================================
+Creating test dataset...
+
+============================================================
+GENERATING SIAMESE NETWORK TRAINING PAIRS
+============================================================
+
+Processing dataset: i
+Loaded i: 313 GT trajectories, 789 RAW fragments
+Generating positive pairs...
+Generated 178 positive pairs
+Mining hard negative pairs...
+Generated 178 negative pairs
+
+============================================================
+DATASET STATISTICS
+============================================================
+Total pairs: 356
+Positive pairs: 178 (50.0%)
+Negative pairs: 178 (50.0%)
+
+Computing normalization statistics...
+Normalization stats computed:
+  Mean: [687.99866    25.533201  105.86884     3.3691192]
+  Std: [571.993      14.453085   12.317677    3.1155753]
+✓ Dataset loaded: 356 pairs
+✓ Dataset loader test PASSED
+✓ Dataset loader test PASSED
+
+========================================================================
+TEST 3: Quick Training Test (1 Epoch)
+========================================================================
+Loading dataset...
+
+============================================================
+GENERATING SIAMESE NETWORK TRAINING PAIRS
+============================================================
+
+Processing dataset: i
+Loaded i: 313 GT trajectories, 789 RAW fragments
+Generating positive pairs...
+Generated 178 positive pairs
+Mining hard negative pairs...
+Generated 178 negative pairs
+
+============================================================
+DATASET STATISTICS
+============================================================
+Total pairs: 356
+Positive pairs: 178 (50.0%)
+Negative pairs: 178 (50.0%)
+
+Computing normalization statistics...
+Normalization stats computed:
+  Mean: [687.99866    25.533201  105.86884     3.3691192]
+  Std: [571.993      14.453085   12.317677    3.1155753]
+Testing with 100 samples...
+Using device: cuda
+✓ Training test completed. Average loss: 10.1393
+✓ Quick training test PASSED
+✓ Quick training test PASSED
+
+========================================================================
+ALL TESTS PASSED!
+========================================================================
+End Time: Mon Dec  1 18:48:51 MST 2025
+Job ID: 41078560
+
+✓ Model architecture works
+✓ Dataset loader works
+✓ Training pipeline works
+
+READY FOR FULL TRAINING!
+Submit training job with: sbatch run_train.sh
+========================================================================

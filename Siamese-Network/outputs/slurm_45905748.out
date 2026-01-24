@@ -1,0 +1,525 @@
+Job ID: 45905748
+Node: sg028
+Start time: Mon Jan 19 10:20:12 MST 2026
+Working directory: /home/raswanth/I24/I24-postprocessing-lite/Siamese-Network
+Mon Jan 19 10:20:12 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.95.05              Driver Version: 580.95.05      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:41:00.0 Off |                    0 |
+| N/A   36C    P0             83W /  500W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+Using device: cuda
+GPU: NVIDIA A100-SXM4-80GB
+
+============================================================
+LOADING DATASET
+============================================================
+Using EnhancedTrajectoryPairDataset with masking + hard negative mining
+
+============================================================
+GENERATING ENHANCED SIAMESE NETWORK TRAINING PAIRS
+============================================================
+
+Processing dataset: i
+Loaded i: 313 GT trajectories, 789 RAW fragments
+Generating positive pairs via trajectory masking...
+  Generated 6580 positive pairs from masking
+Mining hard negative pairs...
+  Mined 100 hard negative pairs
+  Supplementing with 2093 random negative pairs...
+  Total negative pairs: 2193
+
+Processing dataset: ii
+Loaded ii: 99 GT trajectories, 411 RAW fragments
+Generating positive pairs via trajectory masking...
+  Generated 1492 positive pairs from masking
+Mining hard negative pairs...
+  Mined 53 hard negative pairs
+  Supplementing with 2637 random negative pairs...
+  Total negative pairs: 2690
+
+Processing dataset: iii
+Loaded iii: 266 GT trajectories, 1112 RAW fragments
+Generating positive pairs via trajectory masking...
+  Generated 4171 positive pairs from masking
+Mining hard negative pairs...
+  Mined 515 hard negative pairs
+  Supplementing with 3566 random negative pairs...
+  Total negative pairs: 4081
+
+============================================================
+ENHANCED DATASET STATISTICS
+============================================================
+Total pairs: 21207
+Positive pairs: 12243 (57.7%)
+Negative pairs: 8964 (42.3%)
+
+Computing normalization statistics...
+Normalization stats computed from 1000 pairs
+
+Dataset split:
+  Training samples: 16965
+  Validation samples: 4242
+
+============================================================
+CREATING MODEL
+============================================================
+
+Model parameters: 607,489
+
+============================================================
+STARTING TRAINING - 50 EPOCHS
+============================================================
+
+Epoch 1/50
+------------------------------------------------------------
+
+Epoch 1 Summary:
+  Train Loss: 0.3482 | Val Loss: 0.0885
+  Train Acc:  95.85% | Val Acc:  98.49%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 2/50
+------------------------------------------------------------
+
+Epoch 2 Summary:
+  Train Loss: 0.1041 | Val Loss: 0.0630
+  Train Acc:  99.09% | Val Acc:  99.58%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 3/50
+------------------------------------------------------------
+
+Epoch 3 Summary:
+  Train Loss: 0.0559 | Val Loss: 0.0332
+  Train Acc:  99.33% | Val Acc:  99.58%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+
+Epoch 4/50
+------------------------------------------------------------
+
+Epoch 4 Summary:
+  Train Loss: 0.0523 | Val Loss: 0.0245
+  Train Acc:  99.35% | Val Acc:  99.32%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+
+Epoch 5/50
+------------------------------------------------------------
+
+Epoch 5 Summary:
+  Train Loss: 0.0420 | Val Loss: 0.0208
+  Train Acc:  99.44% | Val Acc:  99.65%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 6/50
+------------------------------------------------------------
+
+Epoch 6 Summary:
+  Train Loss: 0.0198 | Val Loss: 0.0111
+  Train Acc:  99.61% | Val Acc:  99.67%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 7/50
+------------------------------------------------------------
+
+Epoch 7 Summary:
+  Train Loss: 0.0306 | Val Loss: 0.0102
+  Train Acc:  99.56% | Val Acc:  99.69%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 8/50
+------------------------------------------------------------
+
+Epoch 8 Summary:
+  Train Loss: 0.0209 | Val Loss: 0.0102
+  Train Acc:  99.76% | Val Acc:  99.79%
+  Learning Rate: 0.001000
+  ✓ Best accuracy model saved!
+
+Epoch 9/50
+------------------------------------------------------------
+
+Epoch 9 Summary:
+  Train Loss: 0.0198 | Val Loss: 0.0176
+  Train Acc:  99.75% | Val Acc:  99.91%
+  Learning Rate: 0.001000
+  ✓ Best accuracy model saved!
+
+Epoch 10/50
+------------------------------------------------------------
+
+Epoch 10 Summary:
+  Train Loss: 0.0200 | Val Loss: 0.0117
+  Train Acc:  99.89% | Val Acc:  99.86%
+  Learning Rate: 0.001000
+
+Epoch 11/50
+------------------------------------------------------------
+
+Epoch 11 Summary:
+  Train Loss: 0.0127 | Val Loss: 0.0036
+  Train Acc:  99.77% | Val Acc:  99.91%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+
+Epoch 12/50
+------------------------------------------------------------
+
+Epoch 12 Summary:
+  Train Loss: 0.0054 | Val Loss: 0.0031
+  Train Acc:  99.92% | Val Acc:  99.93%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 13/50
+------------------------------------------------------------
+
+Epoch 13 Summary:
+  Train Loss: 0.0095 | Val Loss: 0.0034
+  Train Acc:  99.89% | Val Acc:  99.93%
+  Learning Rate: 0.001000
+
+Epoch 14/50
+------------------------------------------------------------
+
+Epoch 14 Summary:
+  Train Loss: 0.0092 | Val Loss: 0.0062
+  Train Acc:  99.89% | Val Acc:  99.98%
+  Learning Rate: 0.001000
+  ✓ Best accuracy model saved!
+
+Epoch 15/50
+------------------------------------------------------------
+
+Epoch 15 Summary:
+  Train Loss: 0.0029 | Val Loss: 0.0012
+  Train Acc:  99.98% | Val Acc:  100.00%
+  Learning Rate: 0.001000
+  ✓ Best loss model saved!
+  ✓ Best accuracy model saved!
+
+Epoch 16/50
+------------------------------------------------------------
+
+Epoch 16 Summary:
+  Train Loss: 0.0015 | Val Loss: 0.0024
+  Train Acc:  99.99% | Val Acc:  99.95%
+  Learning Rate: 0.000500
+
+Epoch 17/50
+------------------------------------------------------------
+
+Epoch 17 Summary:
+  Train Loss: 0.0088 | Val Loss: 0.0041
+  Train Acc:  99.97% | Val Acc:  99.93%
+  Learning Rate: 0.000500
+
+Epoch 18/50
+------------------------------------------------------------
+
+Epoch 18 Summary:
+  Train Loss: 0.0069 | Val Loss: 0.0023
+  Train Acc:  99.94% | Val Acc:  99.98%
+  Learning Rate: 0.000500
+
+Epoch 19/50
+------------------------------------------------------------
+
+Epoch 19 Summary:
+  Train Loss: 0.0030 | Val Loss: 0.0010
+  Train Acc:  99.96% | Val Acc:  99.98%
+  Learning Rate: 0.000500
+  ✓ Best loss model saved!
+
+Epoch 20/50
+------------------------------------------------------------
+
+Epoch 20 Summary:
+  Train Loss: 0.0031 | Val Loss: 0.0013
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 21/50
+------------------------------------------------------------
+
+Epoch 21 Summary:
+  Train Loss: 0.0027 | Val Loss: 0.0009
+  Train Acc:  99.94% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+  ✓ Best loss model saved!
+
+Epoch 22/50
+------------------------------------------------------------
+
+Epoch 22 Summary:
+  Train Loss: 0.0063 | Val Loss: 0.0790
+  Train Acc:  99.96% | Val Acc:  99.93%
+  Learning Rate: 0.000500
+
+Epoch 23/50
+------------------------------------------------------------
+
+Epoch 23 Summary:
+  Train Loss: 0.0020 | Val Loss: 0.0012
+  Train Acc:  99.99% | Val Acc:  99.95%
+  Learning Rate: 0.000500
+
+Epoch 24/50
+------------------------------------------------------------
+
+Epoch 24 Summary:
+  Train Loss: 0.0045 | Val Loss: 0.0011
+  Train Acc:  99.95% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 25/50
+------------------------------------------------------------
+
+Epoch 25 Summary:
+  Train Loss: 0.0014 | Val Loss: 0.0017
+  Train Acc:  99.98% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 26/50
+------------------------------------------------------------
+
+Epoch 26 Summary:
+  Train Loss: 0.0029 | Val Loss: 0.0014
+  Train Acc:  99.96% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 27/50
+------------------------------------------------------------
+
+Epoch 27 Summary:
+  Train Loss: 0.0017 | Val Loss: 0.0010
+  Train Acc:  99.96% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 28/50
+------------------------------------------------------------
+
+Epoch 28 Summary:
+  Train Loss: 0.0017 | Val Loss: 0.0014
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 29/50
+------------------------------------------------------------
+
+Epoch 29 Summary:
+  Train Loss: 0.0009 | Val Loss: 0.0011
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000500
+
+Epoch 30/50
+------------------------------------------------------------
+
+Epoch 30 Summary:
+  Train Loss: 0.0022 | Val Loss: 0.0022
+  Train Acc:  99.96% | Val Acc:  99.95%
+  Learning Rate: 0.000500
+
+Epoch 31/50
+------------------------------------------------------------
+
+Epoch 31 Summary:
+  Train Loss: 0.0014 | Val Loss: 0.0007
+  Train Acc:  99.99% | Val Acc:  99.98%
+  Learning Rate: 0.000250
+  ✓ Best loss model saved!
+
+Epoch 32/50
+------------------------------------------------------------
+
+Epoch 32 Summary:
+  Train Loss: 0.0006 | Val Loss: 0.0007
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 33/50
+------------------------------------------------------------
+
+Epoch 33 Summary:
+  Train Loss: 0.0004 | Val Loss: 0.0007
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+  ✓ Best loss model saved!
+
+Epoch 34/50
+------------------------------------------------------------
+
+Epoch 34 Summary:
+  Train Loss: 0.0013 | Val Loss: 0.0016
+  Train Acc:  99.99% | Val Acc:  99.98%
+  Learning Rate: 0.000250
+
+Epoch 35/50
+------------------------------------------------------------
+
+Epoch 35 Summary:
+  Train Loss: 0.0011 | Val Loss: 0.0006
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+  ✓ Best loss model saved!
+
+Epoch 36/50
+------------------------------------------------------------
+
+Epoch 36 Summary:
+  Train Loss: 0.0005 | Val Loss: 0.0007
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 37/50
+------------------------------------------------------------
+
+Epoch 37 Summary:
+  Train Loss: 0.0004 | Val Loss: 0.0004
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+  ✓ Best loss model saved!
+
+Epoch 38/50
+------------------------------------------------------------
+
+Epoch 38 Summary:
+  Train Loss: 0.0015 | Val Loss: 0.0008
+  Train Acc:  100.00% | Val Acc:  99.98%
+  Learning Rate: 0.000250
+
+Epoch 39/50
+------------------------------------------------------------
+
+Epoch 39 Summary:
+  Train Loss: 0.0018 | Val Loss: 0.0006
+  Train Acc:  99.97% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 40/50
+------------------------------------------------------------
+
+Epoch 40 Summary:
+  Train Loss: 0.0012 | Val Loss: 0.0007
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 41/50
+------------------------------------------------------------
+
+Epoch 41 Summary:
+  Train Loss: 0.0022 | Val Loss: 0.0005
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 42/50
+------------------------------------------------------------
+
+Epoch 42 Summary:
+  Train Loss: 0.0004 | Val Loss: 0.0005
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 43/50
+------------------------------------------------------------
+
+Epoch 43 Summary:
+  Train Loss: 0.0003 | Val Loss: 0.0004
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+  ✓ Best loss model saved!
+
+Epoch 44/50
+------------------------------------------------------------
+
+Epoch 44 Summary:
+  Train Loss: 0.0005 | Val Loss: 0.0006
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 45/50
+------------------------------------------------------------
+
+Epoch 45 Summary:
+  Train Loss: 0.0010 | Val Loss: 0.0008
+  Train Acc:  99.98% | Val Acc:  100.00%
+  Learning Rate: 0.000250
+
+Epoch 46/50
+------------------------------------------------------------
+
+Epoch 46 Summary:
+  Train Loss: 0.0007 | Val Loss: 0.0005
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000125
+
+Epoch 47/50
+------------------------------------------------------------
+
+Epoch 47 Summary:
+  Train Loss: 0.0004 | Val Loss: 0.0004
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000125
+
+Epoch 48/50
+------------------------------------------------------------
+
+Epoch 48 Summary:
+  Train Loss: 0.0009 | Val Loss: 0.0004
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000125
+
+Epoch 49/50
+------------------------------------------------------------
+
+Epoch 49 Summary:
+  Train Loss: 0.0031 | Val Loss: 0.0006
+  Train Acc:  99.99% | Val Acc:  100.00%
+  Learning Rate: 0.000125
+
+Epoch 50/50
+------------------------------------------------------------
+
+Epoch 50 Summary:
+  Train Loss: 0.0003 | Val Loss: 0.0003
+  Train Acc:  100.00% | Val Acc:  100.00%
+  Learning Rate: 0.000125
+  ✓ Best loss model saved!
+
+============================================================
+TRAINING COMPLETE!
+============================================================
+Best Validation Loss: 0.0003
+Best Validation Accuracy: 100.00%
+
+Training history saved to: /home/raswanth/I24/I24-postprocessing-lite/Siamese-Network/outputs/training_history.json
+Training curves saved to: /home/raswanth/I24/I24-postprocessing-lite/Siamese-Network/outputs/training_curves.png
+End time: Mon Jan 19 11:38:42 MST 2026

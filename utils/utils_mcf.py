@@ -3,6 +3,7 @@ import networkx as nx
 import queue
 from collections import deque
 from utils.utils_stitcher_cost import stitch_cost, stitch_cost_simple_distance
+from utils.stitch_cost_interface import CostFunctionFactory
 # from scipy import stats
 from i24_logger.log_writer import catch_critical
 import itertools
@@ -53,9 +54,13 @@ class MOTGraphSingle:
             self.param["stitch_thresh"] = self.param["master_stitch_thresh"]
         else:
             self.param["time_win"] = parameters["time_win"]
-        self.compute_node_pos_map = {key:val for val,key in enumerate(parameters["compute_node_list"])}   
+        self.compute_node_pos_map = {key:val for val,key in enumerate(parameters["compute_node_list"])}
         self.cache = {}
         self.direction = direction
+
+        # Initialize cost function (configurable via parameters)
+        cost_config = parameters.get('cost_function', {'type': 'bhattacharyya'})
+        self.cost_fn = CostFunctionFactory.create(cost_config)
           
     # @catch_critical(errors = (Exception))
     def add_node(self, fragment):
@@ -97,7 +102,7 @@ class MOTGraphSingle:
             #     cost = stitch_cost(fgmt, fragment, self.TIME_WIN, self.param)
 
             if abs(self.compute_node_pos_map[node_id]-self.compute_node_pos_map[fgmt_node_id]) <= node_diff_thresh:
-                cost = stitch_cost(fgmt, fragment, self.TIME_WIN, self.param)
+                cost = self.cost_fn.compute_cost(fgmt, fragment, self.TIME_WIN, self.param)
 #                 print(str(fgmt["_id"])[-4:], str(fragment["_id"])[-4:], cost)
             else:
                 cost = 1e5
@@ -137,7 +142,7 @@ class MOTGraphSingle:
         for id1, id2 in comb:
             f1 = self.cache[id1]
             f2 = self.cache[id2]
-            cost = stitch_cost(f1, f2, self.TIME_WIN, self.param)
+            cost = self.cost_fn.compute_cost(f1, f2, self.TIME_WIN, self.param)
             # print(cost)
             if cost > cost_thresh:
                 return False # detect high cost

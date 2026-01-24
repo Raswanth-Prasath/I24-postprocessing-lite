@@ -26,7 +26,7 @@ from i24_logger.log_writer import catch_critical
 from utils.utils_stitcher_cost import bhattacharyya_distance
 from utils.misc import SortedDLL
 import warnings
-warnings.filterwarnings('error')
+warnings.filterwarnings('ignore')
 
 
 
@@ -69,7 +69,7 @@ def merge_resample(traj, conf_threshold):
     # resample to 100hz
     # to avoid the bias introduced by "floor" resample..., first upsample to 10ms, and then downsample to 25hz,
     # this method does not "snap" the timestamps to floor
-    df=df.resample('10L').mean().interpolate(method="linear").resample('40L').asfreq()#.resample('0.04S')#.asfreq()#.interpolate(method="linear")
+    df=df.resample('10ms').mean().interpolate(method="linear").resample('40ms').asfreq()#.resample('0.04S')#.asfreq()#.interpolate(method="linear")
     # df=df.groupby(df.index.floor('0.04S')).mean().resample('0.04S').asfreq()
 
 

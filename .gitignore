@@ -1,0 +1,16 @@
+# Large data files
+GT_*.json
+RAW_*.json
+REC_*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE/Editor
+.DS_Store
+*.swp
