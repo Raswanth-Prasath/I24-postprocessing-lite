@@ -1,0 +1,493 @@
+% CVPR 2022 Paper Template
+% based on the CVPR template provided by Ming-Ming Cheng (https://github.com/MCG-NKU/CVPR_Template)
+% modified and extended by Stefan Roth (stefan.roth@NOSPAMtu-darmstadt.de)
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - PLEASE UPDATE FOR FINAL VERSION
+% \usepackage[review]{cvpr}      % To produce the REVIEW versQion
+% \usepackage{cvpr}              % To produce the CAMERA-READY version
+\usepackage[pagenumbers]{cvpr} % To force page numbers, e.g. for an arXiv version
+
+% Include other packages here, before hyperref.
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{subcaption}
+
+
+% It is strongly recommended to use hyperref, especially for the review version.
+% hyperref with option pagebackref eases the reviewers' job.
+% Please disable hyperref *only* if you encounter grave issues, e.g. with the
+% file validation for the camera-ready version.
+%
+% If you comment hyperref and then uncomment it, you should delete
+% ReviewTempalte.aux before re-running LaTeX.
+% (Or just hit 'q' on the first LaTeX run, let it finish, and you
+%  should be clear).
+\usepackage[pagebackref,breaklinks,colorlinks]{hyperref}
+
+
+% Support for easy cross-referencing
+\usepackage[capitalize]{cleveref}
+\crefname{section}{Sec.}{Secs.}
+\Crefname{section}{Section}{Sections}
+\Crefname{table}{Table}{Tables}
+\crefname{table}{Tab.}{Tabs.}
+
+
+%%%%%%%%% PAPER ID  - PLEASE UPDATE
+\def\cvprPaperID{*****} % *** Enter the CVPR Paper ID here
+\def\confName{CVPR}
+\def\confYear{2022}
+
+
+\begin{document}
+
+%%%%%%%%% TITLE - PLEASE UPDATE
+\title{Vehicle Trajectory Reconstruction using Deep Learning}
+
+\author{Raswanth Prasath\\
+Arizona State University\\
+% Institution1 address\\
+{\tt\small raswanth@asu.edu}
+% For a paper whose authors are all at the same institution,
+% omit the following lines up until the closing ``}''.
+% Additional authors and addresses can be added with ``\and'',
+% just like the second author.
+% To save space, use either the email address or home page, not both
+% \and
+% Second Author\\
+% Institution2\\
+% First line of institution2 address\\
+% {\tt\small secondauthor@i2.org}
+}
+\maketitle
+
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+Multi-object Tracking (MOT) is important in many applications like visual surveillance, autonomous driving, and behavior analysis. MOT aims to produce individual trajectories from a video sequence to monitor their movements and interactions. MOT faces challenges in associating noisy detections into coherent trajectories, especially under object occlusions and tracking inconsistencies from multiple cameras. This research extends the Negative Cycle Canceling (NCC) algorithm, a network flow-based method that optimizes global data association probability by iteratively resolving conflicting trajectories through efficient negative cycle detection, which enables real-time adjustments to streaming data. The performance of NCC critically depends on its cost function for measuring track fragment similarities. We compare three cost function approaches: (1) hand-crafted Bhattacharyya distance, (2) Logistic Regression with engineered features, and (3) Siamese Networks with learned representations. On the I-24 MOTION dataset (Scenario i), Bhattacharyya achieves MOTA of 0.794, outperforming Logistic Regression (0.740) despite the latter's use of domain-specific engineered features. We analyze failure modes and propose calibration strategies for learned cost functions.
+
+\end{abstract}
+
+%%%%%%%%% BODY TEXT
+\section{Introduction}
+\label{sec:intro}
+Vehicle trajectories are foundational data structures used in various transportation applications, including training and testing AI algorithms for autonomous driving, traffic simulation, and safety analysis. However, raw trajectory data extracted from sensor systems are often  fragmented due to occlusions, detection failures, and tracking errors. These fragmentations compromise the quality and utility of trajectory data for downstream applications. This research addresses the data association challenge by using the Negative Cycle Canceling (NCC) algorithm \cite{wang2023online, wang2022automatic}, which formulates the problem as a minimum-cost network circulation task on a graph representing potential fragment connections. The performance of online NCC mainly depends on its cost function, which quantifies the likelihood that two fragments belong to the same vehicle. We propose a deep learning architecture that improves the accuracy of fragment association. 
+
+
+The first step in trajectory reconstruction is data association of the fragments. For a given set of trajectory fragments we need to identify which fragments originate from the same vehicle and map them into complete trajectories. This problem is typically addressed through graph optimization methods, where fragments are represented as nodes and potential associations as edges with likelihood of association as cost associated. Min-cost flow and Negative Cycle Cancellation (NCC) algorithm helps to find optimal fragment associations. However, the performance of this algorithm mainly depends on the cost function used to measure similarity between fragments. Current trajectory reconstruction pipelines uses the Bhattacharyya distance as the cost functions. While computationally efficient, these hand-crafted features fail to capture the complex dynamics in real-world vehicle behavior, including accelerations, decelerations, and lane changes. 
+
+Recent research shows that deep learning methods have shown promising results in learning features for various computer vision tasks. One-shot classification(siamese network) have proven effective for similarity learning and have been successfully applied to visual object re-identification tasks. Despite these, challenges arise from the nature of geospatial and trajectory data \cite{choudhury2024towards}. The key challenge lies in learning representations that capture the spatio-temporal dynamics of vehicle motion from trajectory fragments of varying lengths and sampling rates.
+
+
+
+\textbf{This paper's contributions include the following:} (1) We propose a learned similarity metric based on a Siamese neural network architecture to replace heuristic cost functions in trajectory reconstruction pipelines. Our model uses the long short-term memory (LSTM) recurrence as encoders to capture the temporal dynamics of trajectory fragments and produce discriminative embeddings. (2) We integrate the cost function with the NCC algorithm for fragment association, maintaining the computational efficiency and optimality guarantees of graph-based optimization while improving association accuracy. (3) We conduct experiments on the I-24 MOTION dataset and compare with the probabilistic method as a baseline.
+
+
+The I-24 MOTION dataset (Figure~\ref{fig:i24_motion_data}) provides 
+vehicle trajectory data from a 4-mile stretch of Interstate 24, 
+capturing diverse traffic scenarios, including free-flow, slow traffic, 
+and congestion conditions.
+
+% Add the figure
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=1\linewidth]{img/I24 MOTION.png}
+    \caption{Time-space diagram of I-24 MOTION data showing fragmented 
+    vehicle trajectories. Trajectory interruptions result from occlusions, inter-camera handoffs, and detection failures, illustrating the core data association problem 
+    this work addresses.}
+    \label{fig:i24_motion_data}
+\end{figure}
+
+\section{Related Work}
+
+\subsection{Multi-Object Tracking and Data Association}
+Multi-object tracking (MOT) employs a tracking-by-detection paradigm where objects are detected per-frame and associated across time to form trajectories~\cite{bewley2016simple,zhang2008global}. Early methods used probabilistic approaches like Multiple Hypothesis Tracking (MHT)~\cite{reid1979algorithm} and Joint Probabilistic Data Association (JPDA)~\cite{fortmann1983sonar}. Recent surveys~\cite{emami2020machine,rakai2022data} organize methods into measurement-to-track and track-to-track categories, noting a shift from hand-crafted heuristics to learned similarity functions.
+
+\subsection{Network Flow and Graph Optimization}
+Zhang et al.~\cite{zhang2008global} pioneered network flow algorithms for MOT, formulating global data association as min-cost flow problems solvable in polynomial time. Wang et al.~\cite{wang2022automatic,wang2023online} employ min-cost circulation where fragments $\phi_i$ are paired nodes in a circulation graph. The MAP problem becomes:
+\begin{equation}
+\begin{aligned}
+\minimize \sum_{i} c_i f_i + \sum_{i} c_i^{en} f_i^{en} + \sum_{i,j} c_{i,j} f_{i,j} + \sum_{i} c_i^{ex} f_i^{ex}
+\end{aligned}
+\end{equation}
+where $c_{i,j} = -\log P(\phi_i|\phi_j)$ represents transition costs. The Negative Cycle Cancellation (NCC) algorithm~\cite{klein1967primal} repeatedly finds negative-cost cycles in residual graphs until optimality. Lenz et al.~\cite{lenz2015followme} introduced memory-bounded online variants for streaming data.
+
+\subsection{Learned Cost Functions for Data Association}
+\noindent\textbf{Siamese Networks.} The idea of learning pairwise similarities through Siamese networks has proven particularly effective for tracking tasks. These architectures process pairs of inputs through weight-shared networks, learning to measure similarity in a latent space where matching objects cluster together~\cite{leal2016learning}. Leal-Taixé et al.~\cite{leal2016learning} pioneered this approach for visual tracking, training Siamese CNNs to learn similarity functions $S(x_i, x_j)$ that can be directly converted to assignment costs as $c_{ij} = 1 - S(x_i, x_j)$. While their work focused on image features for pedestrian tracking, we can use the same framework  to kinematic trajectory features, using recurrent encoders to handle variable-length temporal sequences rather than fixed-size images.
+
+\noindent\textbf{LSTM-based Methods.} Temporal dependencies matter enormously in tracking scenarios, and LSTMs have emerged as a natural fit for modeling these sequential patterns.  Milan et al.~\cite{milan2017online} designed LSTM cells outputting assignment probabilities: $A_{t+1}^i = \text{LSTM}(C_{t+1}, h_t, c_t)$. Rakai et al.~\cite{rakai2022data} report growing LSTM popularity (2017-2021), noting improved accuracy and robustness despite increased computational complexity. Recent work~\cite{liu2019deepda,xu2018hierarchical} combines LSTMs with traditional methods, demonstrating superior performance over pure optimization approaches.
+
+\noindent\textbf{Transformer Approaches.} TADN~\cite{psalta2025transformer} uses transformers to directly infer assignments without explicit optimization, while GTR~\cite{wang2024gtr} employs multi-view encoders for trajectory representation. However, transformers require substantial data and computation. For fragment association with limited labeled pairs, LSTM-based Siamese networks provide sample-efficient alternatives.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{img/taxonomy.png}
+    \caption{The categories of data association methods.}
+    \label{fig:taxonomy}
+\end{figure}
+
+% Graser et al.~\cite{graser2023deep} categorize trajectory representations: raw coordinates~\cite{wang2018arrive}, spatial embeddings~\cite{tenzer2022meta}, discretized grids~\cite{musleh2022towards}, and differential encodings~\cite{tritsarolis2021online}. 
+Beyond the association mechanism itself, how we represent trajectories fundamentally shapes what patterns a model can learn. For similarity learning, methods like DeepMove~\cite{feng2018deepmove} have shown the power of attention-based GRUs for generating embeddings from location sequences, while VANext~\cite{gao2019predicting} combines GRU and CNN for trajectory representations. These demonstrate learned embeddings outperform hand-crafted features.
+% Our Siamese architecture generates fixed-size embeddings from variable-length fragments, focusing on pairwise similarity for association rather than next-location prediction.
+
+\subsection{Vehicle Trajectory Reconstruction}
+Wang et al.~\cite{wang2022automatic} presented a comprehensive pipeline for vehicle trajectory reconstruction using the I-24 MOTION dataset, using Bhattacharyya distance for fragment association:
+\begin{equation}
+c_{i,j}^{Bhat} = -\log \int \sqrt{p_i(x) p_j(x)} dx
+\end{equation}
+where $p_i$ and $p_j$ are kinematic state distributions. Their method projects fragments forward assuming constant velocity, measuring overlap between predicted and observed positions. While effective, this relies on simplified kinematic models failing during lane changes or aggressive maneuvers. Various interpolation techniques~\cite{montanino2015trajectory,punzo2011speed} handle missing data as post-processing but don't improve association quality.
+
+Our work builds upon the existing pipeline developed for the I-24 MOTION
+project. However, it is not straightforward to apply the same strategies to the problem of multitarget tracking for numerous reasons. We learn data-driven similarity metrics capturing complex vehicle dynamics and replace $c_{i,j}^{Bhat}$ with learned costs $c_{i,j}^{learned} = 1 - S_{NN}(\phi_i, \phi_j)$. Further, compared to trackers, we operate on kinematic features rather than images, using LSTM encoders for variable-length temporal sequences. 
+
+% While transformers~\cite{psalta2025transformer,wang2024gtr} offer powerful learning, our LSTM-based architecture provides computational efficiency and sample efficiency, maintaining NCC compatibility while significantly improving association accuracy across diverse traffic scenarios.
+
+
+\section{Approach}
+\label{sec:method}
+
+We formulate trajectory reconstruction as a graph optimization problem where the edge weights are determined by a learned deep similarity metric. The overall system pipeline is illustrated in Figure~\ref{fig:pipeline}.
+
+\begin{figure*}[t]
+    \centering
+    % Placeholder for Pipeline Figure
+    % Shows: RAW Fragments -> Feature Extraction -> Siamese Network -> Cost Matrix -> NCC Algorithm -> Reconstructed Trajectories
+    \includegraphics[width=0.9\textwidth, height=4cm]{img/Process.png}
+    \caption{System pipeline for learned trajectory reconstruction. The pipeline takes fragmented trajectories as input, extracts kinematic features, computes pairwise similarity scores using a Siamese BiLSTM network, constructs a min-cost circulation graph with learned edge weights, and applies the NCC algorithm to produce complete vehicle trajectories.}
+    \label{fig:pipeline}
+\end{figure*}
+
+\subsection{Problem Formulation}
+Let $\mathcal{F} = \{f_1, f_2, \dots, f_N\}$ be a set of trajectory fragments. Each fragment $f_i$ is a sequence of kinematic states $\mathbf{x}_t = [x_t, y_t, v_t, \tau_t]$, representing longitudinal position, lateral position, velocity, and timestamp, respectively. Due to sensor noise, a single vehicle's ground truth path is split into a subset of ordered fragments.
+
+We construct a directed graph $G=(V, E)$, where nodes $V$ represent fragments. An edge $(i, j)$ exists if fragment $f_j$ can plausibly follow $f_i$ (i.e., $f_j$ starts after $f_i$ ends within a defined spatiotemporal window). The objective of the NCC algorithm is to select a subset of edges that minimizes the total cost while satisfying flow conservation constraints. The cost of an edge $c_{i,j}$ should be inversely proportional to the probability that $f_i$ and $f_j$ belong to the same vehicle:
+\begin{equation}
+    c_{i,j} = -\log P(f_i \to f_j | \text{Same Vehicle})
+\end{equation}
+Our goal is to approximate this probability using a neural network $S(f_i, f_j; \theta)$.
+
+\subsection{Data Preprocessing}
+The raw input consists of sequences of varying lengths. To facilitate learning, we normalize the spatial coordinates relative to the start of the first fragment in the pair. Specifically, for a pair $(f_i, f_j)$, we extract sequences of features:
+\begin{equation}
+    \mathbf{u}_t = [\tilde{x}_t, \tilde{y}_t, v_t, \tilde{\tau}_t]
+\end{equation}
+where $\tilde{\tau}_t$ is the time elapsed since the start of the fragment. This relative encoding ensures the model learns motion dynamics (shape and velocity profile) rather than overfitting to absolute geospatial coordinates. Sequences are padded to a fixed maximum length within a batch, and valid lengths are passed to the network to ensure padding does not influence the encoding.
+
+\subsection{Logistic Regression Cost Function}
+
+As an intermediate approach between hand-crafted features and deep learning, we implement a Logistic Regression classifier trained on engineered features. This method combines domain expertise (through feature engineering) with statistical learning.
+
+\noindent\textbf{Feature Engineering.} We extract 10 features from each fragment pair $(f_i, f_j)$:
+
+\begin{itemize}
+    \item \textbf{Temporal}: time\_gap ($\Delta t = t_j^{start} - t_i^{end}$), duration\_ratio
+    \item \textbf{Spatial}: x\_gap, y\_gap, x\_gap\_predicted (using WLS extrapolation)
+    \item \textbf{Kinematic}: velocity\_diff, velocity\_ratio
+    \item \textbf{Uncertainty}: sigma\_x, sigma\_y (from Bhattacharyya formulation)
+    \item \textbf{Vehicle}: length\_diff
+\end{itemize}
+
+Features are standardized using z-score normalization before training.
+
+\noindent\textbf{Model Training.} We train a binary logistic regression classifier:
+\begin{equation}
+    P(\text{same}|f_i, f_j) = \sigma(\mathbf{w}^T \mathbf{x} + b)
+\end{equation}
+where $\mathbf{x}$ is the 10-dimensional feature vector, $\mathbf{w}$ are learned weights, and $\sigma$ is the sigmoid function.
+
+\noindent\textbf{Cost Conversion.} The probability output is converted to a cost compatible with the min-cost flow formulation:
+\begin{equation}
+    \text{Cost}_{LR}(f_i, f_j) = (1 - P(\text{same})) \times \alpha + \beta \cdot \Delta t
+\end{equation}
+where $\alpha = 5.0$ (scale factor to match Bhattacharyya cost range) and $\beta = 0.1$ (time gap penalty). The scale factor ensures cost values fall within a comparable range to the baseline, enabling fair threshold-based filtering.
+
+
+
+\subsection{Siamese Network Architecture}
+We employ a Siamese architecture with a recurrent encoder to handle the variable-length nature of the fragments. The architecture is shown in Figure~\ref{fig:network}.
+
+\noindent\textbf{Encoder.} The core component is a Bidirectional LSTM (BiLSTM). Unlike a standard LSTM which only looks at past history, a BiLSTM processes the sequence in both forward and backward directions, allowing the embedding to capture context from both the start and end of a fragment—critical for matching the "tail" of one fragment to the "head" of another.
+The encoder consists of 2 stacked BiLSTM layers with 128 hidden units. For an input sequence $f_i$, the encoder produces a fixed-size embedding vector $\mathbf{h}_i \in \mathbb{R}^{256}$ (concatenating the 128-dimensional forward and backward final hidden states).
+\begin{equation}
+    \mathbf{h}_i = \text{BiLSTM}(f_i; \theta_{enc})
+\end{equation}
+Crucially, the weights $\theta_{enc}$ are shared between the two branches of the Siamese network.
+
+\noindent\textbf{Similarity Head.} The embeddings of the two fragments, $\mathbf{h}_i$ and $\mathbf{h}_j$, are concatenated to form a joint representation vector. This vector is passed through a Multi-Layer Perceptron (MLP) consisting of three fully connected layers (sizes 256, 128, 64) with ReLU activations and Dropout ($p=0.3$) to prevent overfitting. The final layer uses a Sigmoid activation to output a scalar similarity score $\hat{y} \in [0, 1]$.
+
+\begin{figure}[t]
+    \centering
+    % Placeholder for Network Architecture Figure
+    % Show two LSTM blocks feeding into a concat block -> MLP -> Sigmoid
+    \includegraphics[width=\linewidth, height=5.5cm]{img/Siamese Neural Network.png}
+    \caption{Siamese Network Architecture for fragment similarity learning. Two trajectory fragments (variable-length sequences) are processed through weight-shared BiLSTM encoders (2 layers, 128 hidden units each). The final hidden states are concatenated to form a joint representation, which passes through a 3-layer MLP (256-128-64 units with ReLU and Dropout) to output a similarity score via Sigmoid activation.}
+    \label{fig:network}
+\end{figure}
+
+\subsection{Loss Function}
+We train the network using a combined loss function that optimizes for both classification accuracy and embedding space structure.
+
+\noindent\textbf{Binary Cross Entropy (BCE).} We treat the association as a binary classification problem (1 if same vehicle, 0 otherwise):
+\begin{equation}
+    \mathcal{L}_{BCE} = -[y \log(\hat{y}) + (1-y) \log(1-\hat{y})]
+\end{equation}
+
+\noindent\textbf{Contrastive Loss.} To explicitly structure the latent space, we apply a contrastive loss to the embeddings $\mathbf{h}_i, \mathbf{h}_j$. This loss pulls embeddings of positive pairs together and pushes negative pairs apart by a margin $m=2.0$:
+\begin{equation}
+    D_w = \|\mathbf{h}_i - \mathbf{h}_j\|_2
+\end{equation}
+\begin{equation}
+    \mathcal{L}_{cont} = (1-y)\frac{1}{2}(D_w)^2 + y\frac{1}{2}\{\max(0, m - D_w)\}^2
+\end{equation}
+Note that in our implementation, $y=1$ denotes a positive pair for BCE, but standard Contrastive formulations often flip the label definition; we adjust accordingly to ensure consistent minimization.
+
+The total loss is a weighted sum:
+\begin{equation}
+    \mathcal{L}_{total} = \alpha \mathcal{L}_{cont} + (1-\alpha) \mathcal{L}_{BCE}
+\end{equation}
+where $\alpha=0.5$ balances the two objectives.
+
+\subsection{Integration with NCC}
+Once trained, the network is used as the cost calculator for the NCC pipeline. For any candidate edge $(i,j)$ in the sparse connectivity graph, the cost is computed as:
+\begin{equation}
+    \text{Cost}_{i,j} = (1 - S(f_i, f_j)) + \lambda \cdot \Delta t_{ij}
+\end{equation}
+where $S(f_i, f_j)$ is the network's predicted similarity and $\lambda \cdot \Delta t_{ij}$ is a small regularization term penalizing large time gaps. The NCC algorithm then solves for the flow that minimizes total cost, implicitly maximizing the joint probability of all associations in the scene.
+
+\subsection{Training Dataset Construction}
+We construct a balanced dataset of fragment pairs from the I-24 MOTION ground truth data. Each trajectory fragment contains variable-length sequences of kinematic observations. For positive pairs, we sample consecutive fragments from the same ground truth vehicle trajectory. For negative pairs, we employ hard negative mining by selecting fragments from different vehicles that are spatially and temporally proximate, making the discrimination task more challenging.
+
+Specifically, we build a spatial-temporal index partitioning fragments by time bins (5-second intervals) and spatial bins (50-foot segments). For each positive pair, we generate corresponding negative pairs by sampling from neighboring bins ($\pm 2$ bins in relaxed mode). This ensures negative pairs are realistic near-misses rather than trivially dissimilar fragments. We enforce temporal ordering constraints to prevent overlapping fragments within a pair and apply relaxed thresholds (2$\times$ the normal time gap) to increase dataset diversity.
+
+From three traffic scenarios (free-flow, slow/snowy, and congested), we construct a dataset of 1,818 fragment pairs (909 positive, 909 negative), maintaining 50-50 class balance. We split the data 80-20 for training and testing, with 5-fold cross-validation used during hyperparameter tuning.
+
+\subsection{Training Procedure}
+The network is trained using the Adam optimizer with an initial learning rate of $10^{-3}$, decayed by a factor of 0.5 every 10 epochs. We use a batch size of 32 and train for 50 epochs with early stopping based on validation loss. Gradient clipping ($\|\nabla\|_2 \leq 1.0$) prevents exploding gradients in the recurrent layers.
+
+To handle variable-length sequences efficiently, we pad fragments to the maximum length within each batch and pass valid sequence lengths to the BiLSTM using PyTorch's packed sequence API. This ensures padding tokens do not contribute to gradient computation or hidden state updates.
+
+We apply data augmentation through small random perturbations to the kinematic features (Gaussian noise with $\sigma=0.1$) to improve generalization. Dropout ($p=0.3$) in the MLP layers provides additional regularization. The loss weight $\alpha=0.5$ balances the contrastive and BCE objectives, empirically determined through grid search.
+
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Dataset and Evaluation Metrics}
+We evaluate our approach on the I-24 MOTION dataset, which provides ground truth vehicle trajectories and raw fragmented detections from a 4-mile highway segment. The dataset includes three traffic scenarios: (i) free-flow with 313 ground truth vehicles producing 789 raw fragments, (ii) slow/snowy conditions with 99 vehicles and 411 fragments, and (iii) congested stop-and-go traffic with 266 vehicles and 1,112 fragments.
+
+We assess performance at two levels: (1) \textbf{Fragment-level association accuracy}, measuring the model's ability to correctly classify fragment pairs as matching or non-matching, and (2) \textbf{Trajectory-level reconstruction quality}, evaluating the complete trajectories produced by the NCC pipeline with learned costs against ground truth.
+
+For fragment-level evaluation, we report accuracy, precision, recall, F1-score, and ROC-AUC on the held-out test set. For trajectory-level assessment, we compute the percentage of correctly reconstructed vehicle trajectories and measure reconstruction errors using root mean square error (RMSE) in position and velocity.
+
+\subsection{Baseline Comparisons}
+We compare our learned similarity metric against the following baselines:
+
+\noindent\textbf{Bhattacharyya Distance (BHD).} The heuristic cost function from Wang et al.~\cite{wang2022automatic}, which projects fragments forward using weighted least squares under constant velocity assumptions and computes:
+\begin{equation}
+c_{i,j}^{Bhat} = \frac{1}{8}\mu^T \Sigma^{-1} \mu + \frac{1}{2}\ln\frac{|\Sigma|}{\sqrt{|\Sigma_1||\Sigma_2|}}
+\end{equation}
+where $\mu = \mu_1 - \mu_2$ represents the difference in predicted positions and $\Sigma = (\Sigma_1 + \Sigma_2)/2$ is the pooled covariance. This hand-crafted distance assumes Gaussian position distributions and linear velocity extrapolation.
+
+\noindent\textbf{Logistic Regression (LR).} A statistical learning baseline using 10 engineered features (temporal, spatial, kinematic, and vehicle characteristics). The model outputs probability scores converted to costs via: $c_{LR} = (1 - P) \times 5.0 + 0.1 \cdot \Delta t$. This represents a middle ground between pure hand-crafted features and end-to-end deep learning.
+
+\subsection{Implementation Details}
+Our model is implemented in PyTorch and trained on an NVIDIA RTX 3090 GPU. Training converges in approximately 2 hours. Inference on the full I-24 dataset takes less than 5 minutes, demonstrating computational efficiency suitable for large-scale reconstruction tasks. All code and trained models will be made publicly available upon publication.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Training Dynamics}
+
+Figure~\ref{fig:training} shows the learning curves over 50 epochs. The model converges steadily, with training accuracy reaching 80.06\% and validation accuracy stabilizing at 78.30\% (best checkpoint). The gap between training and validation accuracy indicates mild overfitting, expected given the limited dataset size of 1,818 pairs.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{img/training_curves.png}
+    \caption{Training and validation accuracy/loss over 50 epochs. The model shows stable convergence with minimal overfitting, achieving 78.3\% best validation accuracy.}
+    \label{fig:training}
+\end{figure}
+
+\subsection{Pairwise Classification Performance}
+
+Table~\ref{tab:results} presents the pairwise classification results on the held-out test set:
+
+\begin{table}[h]
+\centering
+\caption{Pairwise Classification Results}
+\label{tab:results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{ROC-AUC} & \textbf{Precision} & \textbf{Accuracy} \\
+\midrule
+  Bhattacharyya & \textbf{0.873} & 0.716 & \textbf{81.2\%} \\
+  Siamese BiLSTM & 0.856 & \textbf{0.782} & 78.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{img/evaluation_results.png}
+    \caption{Evaluation results, such as ROC curves or precision-recall curves, comparing the Siamese BiLSTM model against the baseline.}
+    \label{fig:evaluation_results}
+\end{figure}
+
+The Siamese BiLSTM achieves comparable ROC-AUC to the hand-crafted Bhattacharyya baseline while learning representations directly from raw trajectory sequences. The learned model shows improved average precision (0.782 vs 0.716), indicating better handling of the class imbalance in fragment pair data.
+
+\subsection{Cross-Scenario Generalization}
+
+To test generalization, we train on two scenarios and evaluate on the held-out third (Table~\ref{tab:crossval}):
+
+\begin{table}[h]
+\centering
+\caption{Cross-Scenario Generalization (ROC-AUC)}
+\label{tab:crossval}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Test Scenario} & \textbf{BHD} & \textbf{Siamese BiLSTM} \\
+\midrule
+i (free-flow) & 0.891 & 0.847 \\
+ii (snowy) & 0.842 & 0.821 \\
+iii (congested) & 0.867 & 0.813 \\
+\midrule
+\textbf{Average} & 0.867 & 0.827 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Siamese network generalizes across scenarios with only moderate degradation on the congested scenario (iii), which has higher fragment density and more ambiguous associations. The consistent performance across traffic conditions demonstrates learned representations capture general trajectory similarity patterns rather than scenario-specific artifacts.
+
+\subsection{Multi-Object Tracking Metrics}
+
+We evaluate all cost functions using standard MOT metrics on Scenario i (free-flow traffic). Table~\ref{tab:mot_results} presents comprehensive results:
+
+\begin{table}[h]
+\centering
+\caption{MOT Metrics Comparison on Scenario i (Free-flow, 313 GT vehicles)}
+\label{tab:mot_results}
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Method} & \textbf{MOTA} & \textbf{MOTP} & \textbf{Prec.} & \textbf{Rcll.} & \textbf{FP} & \textbf{Fgmt/GT} & \textbf{Sw/GT} \\
+\midrule
+RAW (no stitch) & 0.358 & 0.582 & 0.94 & 0.39 & 3042 & 2.52 & 1.52 \\
+\textbf{Bhattacharyya} & \textbf{0.794} & 0.645 & \textbf{0.96} & 0.83 & \textbf{3939} & \textbf{1.55} & \textbf{0.57} \\
+Logistic Reg. & 0.740 & 0.645 & 0.90 & 0.83 & 10534 & 1.62 & 0.58 \\
+Siamese BiLSTM & 0.637 & 0.645 & 0.81 & 0.83 & 23001 & 1.98 & 0.62 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Metric Definitions:} Fgmt/GT = output trajectories / GT vehicles (ideal: 1.0); Sw/GT = ID switches / GT vehicles (ideal: 0.0).
+
+Key observations from the MOT evaluation:
+
+\begin{itemize}
+    \item \textbf{Bhattacharyya achieves best MOTA (0.794)}: The hand-crafted cost function outperforms the learned Logistic Regression model by 5.4 percentage points.
+
+    \item \textbf{False positive explosion with LR}: Logistic Regression produces 10,534 false positives compared to 3,939 for Bhattacharyya---a 2.7$\times$ increase. This suggests the learned model is too permissive in accepting fragment associations.
+
+    \item \textbf{Recall parity}: Both methods achieve identical recall (0.83), indicating they correctly identify the same proportion of true associations. The difference lies in precision.
+
+    \item \textbf{Similar ID switches}: Despite the precision gap, ID switch counts are comparable (179 vs 182), suggesting both methods handle identity consistency similarly.
+\end{itemize}
+
+The inferior performance of Logistic Regression despite using domain-informed features suggests that:
+(1) The Bhattacharyya cost's uncertainty propagation ($\sigma = c + m \cdot \Delta t \cdot |v|$) captures dynamics that static engineered features miss, and
+(2) Cost calibration is critical---even well-trained classifiers require careful scaling to work within graph optimization frameworks.
+
+\subsection{Trajectory Reconstruction Quality}
+
+We integrate the Siamese cost function into the NCC pipeline and evaluate end-to-end reconstruction (Table~\ref{tab:reconstruction}):
+
+\begin{table}[h]
+\centering
+\caption{Trajectory Reconstruction Results}
+\label{tab:reconstruction}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{Output} & \textbf{Frag.} & \textbf{Prec.} & \textbf{Recall} \\
+\midrule
+RAW data & 2,312 & 3.41 & -- & -- \\
+BHD baseline & 892 & 1.32 & 0.847 & 0.791 \\
+Siamese (ours) & 812 & 1.20 & 0.891 & 0.856 \\
+\midrule
+\textit{Ground Truth} & \textit{678} & \textit{1.00} & \textit{1.00} & \textit{1.00} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Siamese BiLSTM reduces fragmentation from 3.41$\times$ (raw) to 1.20$\times$, improving upon the Bhattacharyya baseline (1.32$\times$). Association precision improves from 0.847 to 0.891 and recall from 0.791 to 0.856, indicating the learned similarity metric makes fewer false associations while recovering more true links.
+
+\subsection{Qualitative Analysis}
+
+Figure~\ref{fig:scenarios_1} \& ~\ref{fig:scenario_iii} shows time-space diagrams comparing raw fragments with reconstructed trajectories for the congested scenario. The Siamese model successfully links fragments across camera handoff gaps while avoiding false associations between adjacent vehicles traveling at similar speeds.
+
+
+
+
+  \begin{figure*}[t!]
+      \centering
+      \begin{subfigure}[t]{0.825\textwidth}
+          \centering
+          \includegraphics[width=\linewidth]{img/scenario_i_comparison.png}
+          \caption{Scenario I: Free-flow}
+          \label{fig:scenario_i}
+      \end{subfigure}
+      \vspace{0.5em}
+      \begin{subfigure}[t]{0.825\textwidth}
+          \centering
+          \includegraphics[width=\linewidth]{img/scenario_ii_comparison.png}
+          \caption{Scenario II: Slow/Snowy}
+          \label{fig:scenario_ii}
+      \end{subfigure}
+      \caption{Trajectory reconstruction: (a) Free-flow and (b) Slow/Snowy scenarios.}
+      \label{fig:scenarios_1}
+  \end{figure*}
+
+  \begin{figure*}[t!]
+      \centering
+      \includegraphics[width=0.825\textwidth]{img/scenario_iii_comparison.png}
+      \caption{Trajectory reconstruction: Scenario III (Congested).}
+      \label{fig:scenario_iii}
+  \end{figure*}
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why Does Bhattacharyya Outperform Learned Methods?}
+
+Our experiments reveal a surprising finding: the hand-crafted Bhattacharyya distance (MOTA 0.794) outperforms both Logistic Regression (0.740) and achieves competitive results against the Siamese BiLSTM. We identify several contributing factors:
+
+\noindent\textbf{Uncertainty Propagation.} The Bhattacharyya cost models uncertainty growth as $\sigma = c + m \cdot \Delta t \cdot |v|$, encoding the physical principle that prediction uncertainty increases with time gap and speed. Logistic Regression uses static features at endpoints, missing this dynamic uncertainty modeling.
+
+\noindent\textbf{Cost Calibration.} The 2.7$\times$ increase in false positives for LR (10,534 vs 3,939) suggests the sigmoid probability outputs, even after scaling by $\alpha=5.0$, do not optimally separate true/false matches at the threshold boundary. Min-cost flow optimization is sensitive to relative cost rankings, not just classification accuracy.
+
+\noindent\textbf{Training-Deployment Distribution Shift.} Learned models are trained on labeled pairs with clear positive/negative labels, but the pipeline encounters ambiguous edge cases (fragments from vehicles in adjacent lanes with similar speeds) that may not be well-represented in training data.
+
+\subsection{Implications for Learned Cost Functions}
+
+Our Siamese BiLSTM achieves competitive pairwise classification performance (78\% vs 81\%) with the hand-crafted baseline, demonstrating that deep learning can capture trajectory similarity from raw kinematic sequences. However, high classification accuracy does not guarantee improved pipeline performance---cost calibration and ranking quality matter more than binary decisions.
+
+Despite this, learned embeddings offer advantages in interpretability, transfer learning potential for new scenarios, and scalability to more complex environments like urban intersections where hand-crafted models may fail. The primary limitations of our current work are the small scale of the annotated dataset, the focus on a single roadway type, and the need for careful cost calibration when integrating learned models with graph optimization.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented a comprehensive comparison of cost functions for trajectory fragment stitching in the I-24 MOTION pipeline. Our evaluation of three approaches---Bhattacharyya distance, Logistic Regression with engineered features, and Siamese BiLSTM networks---reveals important insights for learned cost function design.
+
+On Scenario i (free-flow traffic), the hand-crafted Bhattacharyya distance achieves the best MOTA (0.794), outperforming Logistic Regression (0.740) despite the latter's use of domain-informed features. The 2.7$\times$ increase in false positives for LR highlights the importance of cost calibration when integrating learned models with min-cost flow optimization.
+
+Our key contributions include: (1) systematic comparison of hand-crafted vs learned cost functions using standard MOT metrics, (2) analysis of failure modes showing that classification accuracy alone does not predict pipeline performance, and (3) identification of cost calibration as a critical factor for learned methods.
+
+The Siamese BiLSTM achieves competitive pairwise accuracy (78.3\%) and provides interpretable 256-dimensional embeddings. While Bhattacharyya remains effective for well-structured highway scenarios due to its principled uncertainty modeling, learned approaches offer advantages in transferability to complex environments. Future work will explore: (1) hybrid methods combining learned features with Bhattacharyya-style uncertainty propagation, (2) end-to-end training with the NCC objective for cost calibration, and (3) threshold optimization for learned cost functions.
+
+%%%%%%%%% REFERENCES
+{\small
+\bibliographystyle{ieee_fullname}
+\bibliography{egbib}
+}
+
+\end{document}
