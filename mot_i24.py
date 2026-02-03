@@ -246,6 +246,11 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
     tracker_traj_count = len(tracker_trajs)
     summary['no_trajs'] = tracker_traj_count
 
+    # Compute Fgmt/GT and Sw/GT
+    num_gt_vehicles = len(gt_trajs)
+    summary['fgmt_per_gt'] = tracker_traj_count / num_gt_vehicles if num_gt_vehicles > 0 else 0
+    summary['sw_per_gt'] = summary['num_switches'].values[0] / num_gt_vehicles if num_gt_vehicles > 0 else 0
+
     # Render summary
     strsummary = mm.io.render_summary(
         summary,
@@ -254,7 +259,9 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
             'motp': '{:.3f}'.format,
             'recall': '{:.2f}'.format,
             'precision': '{:.2f}'.format,
-            'no_trajs': '{:.0f}'.format
+            'no_trajs': '{:.0f}'.format,
+            'fgmt_per_gt': '{:.2f}'.format,
+            'sw_per_gt': '{:.2f}'.format
         },
         namemap={
             'recall': 'Rcll',
@@ -270,7 +277,9 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
             'obj_fragments': 'Obj FM',
             'mota': 'MOTA',
             'motp': 'MOTP',
-            'no_trajs': 'No. trajs'
+            'no_trajs': 'No. trajs',
+            'fgmt_per_gt': 'Fgmt/GT',
+            'sw_per_gt': 'Sw/GT'
         }
     )
     print(f"\nResults for {name}:\n{strsummary}")

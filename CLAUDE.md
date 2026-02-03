@@ -3,6 +3,48 @@
 ## Overview
 Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with learned models, compare multiple architectures, and integrate the best model into the pipeline.
 
+**Environment**: Run in `i24` conda environment (`conda activate i24`)
+
+---
+
+## Latest Results (Feb 3, 2026) - Scenario i
+
+| Method | MOTA | MOTP | Precision | Recall | FP | IDsw | Trajectories |
+|--------|------|------|-----------|--------|------|------|--------------|
+| **Bhattacharyya** | **0.794** | 0.645 | **0.96** | 0.83 | 3939 | 179 | 484 |
+| **Logistic Regression** | 0.740 | 0.645 | 0.90 | 0.83 | 10534 | 182 | 506 |
+| Siamese (testing) | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+
+**Key Finding**: Bhattacharyya baseline outperforms Logistic Regression on scenario i. LR has significantly more false positives (10534 vs 3939).
+
+### Configuration for Each Cost Function
+
+**Bhattacharyya** (default thresholds):
+```json
+"cost_function": { "type": "bhattacharyya" },
+"stitcher_args": { "stitch_thresh": 3, "master_stitch_thresh": 4 }
+```
+
+**Logistic Regression**:
+```json
+"cost_function": {
+    "type": "logistic_regression",
+    "model_path": "Logistic Regression/model_artifacts/combined_optimal_10features.pkl",
+    "scale_factor": 5.0,
+    "time_penalty": 0.1
+}
+```
+
+**Siamese** (adjusted thresholds for 0-2 cost range):
+```json
+"cost_function": {
+    "type": "siamese",
+    "checkpoint_path": "Siamese-Network/outputs/final_model.pth",
+    "device": "cpu"
+},
+"stitcher_args": { "stitch_thresh": 0.8, "master_stitch_thresh": 1.0 }
+```
+
 ---
 
 ## Current Project Structure
@@ -79,11 +121,19 @@ I24-postprocessing-lite/
 | **LR Baseline** | `Logistic Regression/train_torch_lr.py` | ✅ PyTorch implementation |
 | **Config** | `parameters.json` | ✅ cost_function section added |
 
+### Recently Fixed (Feb 3, 2026)
+
+| Issue | Fix | File |
+|-------|-----|------|
+| **Empty REC_i.json output** | Restored `mp.Manager()` for shared queues/dicts | `pp_lite.py` |
+| **Missing direction filter** | Added filter in static_data_reader | `data_feed.py:69-73` |
+| **Siamese cost mismatch** | Adjusted thresholds (0.8/1.0 vs 3/4) | `parameters.json` |
+
 ### Not Yet Implemented
 
 | Component | Planned File | Notes |
 |-----------|--------------|-------|
-| Unified feature extractor | `utils/features_stitch.py` | Feature extraction scattered across files |
+| ~~Unified feature extractor~~ | `utils/features_stitch.py` | ✅ Now implemented |
 | MLP with features | `models/mlp_features.py` | Could use LR features |
 | Siamese Transformer | `models/siamese_transformer.py` | Future work |
 | TCN | `models/tcn.py` | Future work |
@@ -92,6 +142,20 @@ I24-postprocessing-lite/
 ---
 
 ## Part 1: Baseline Results (Bhattacharyya - Target to Beat)
+
+### Updated Measurements (Feb 3, 2026)
+
+| Metric | RAW_i | REC_i (Bhatt) | REC_i (LR) |
+|--------|-------|---------------|------------|
+| Precision | 0.94 | **0.96** | 0.90 |
+| Recall | 0.39 | **0.83** | 0.83 |
+| MOTA | 0.358 | **0.794** | 0.740 |
+| MOTP | 0.582 | 0.645 | 0.645 |
+| FP | 3042 | **3939** | 10534 |
+| IDsw | 475 | **179** | 182 |
+| No. trajs | 789 | 484 | 506 |
+
+### Historical Measurements (reference)
 
 | Metric | RAW_i | REC_i | RAW_ii | REC_ii | RAW_iii | REC_iii |
 |--------|-------|-------|--------|--------|---------|---------|
@@ -362,6 +426,25 @@ RAW Fragments
 
 ## Part 6: Running Commands
 
+**Important**: Always activate i24 environment first:
+```bash
+conda activate i24
+```
+
+### Run Full Pipeline
+```bash
+python pp_lite.py i      # Scenario i (free-flow)
+python pp_lite.py ii     # Scenario ii (snowy)
+python pp_lite.py iii    # Scenario iii (congested)
+```
+
+### MOT Evaluation
+```bash
+python mot_i24.py i      # Compare RAW vs REC vs GT
+python mot_i24.py ii
+python mot_i24.py iii
+```
+
 ### Train Siamese Model
 ```bash
 cd Siamese-Network
@@ -374,17 +457,11 @@ cd Siamese-Network
 python evaluate_siamese.py
 ```
 
-### Run Full Pipeline
-```bash
-python pp_lite.py
-```
-
-### MOT Evaluation
-```bash
-python mot_i24.py i    # Scenario i (free-flow)
-python mot_i24.py ii   # Scenario ii (snowy)
-python mot_i24.py iii  # Scenario iii (congested)
-```
+### Quick Test (single cost function)
+1. Edit `parameters.json` to set desired `cost_function`
+2. Run `python pp_lite.py i`
+3. If REC_i.json starts with `[,{`, fix: `sed -i 's/^\[,/[/' REC_i.json`
+4. Run `python mot_i24.py i`
 
 ---
 

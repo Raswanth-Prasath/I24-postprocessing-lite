@@ -1,0 +1,129 @@
+# Pre-commit hooks for I24-postprocessing-lite
+# See https://pre-commit.com for more information
+# Installation: pip install pre-commit && pre-commit install
+
+repos:
+  # General file formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.pth$|\.npz$'
+      - id: end-of-file-fixer
+        exclude: '\.pth$|\.npz$|\.json$'
+      - id: check-yaml
+      - id: check-json
+        exclude: '^(data/|.*outputs/).*\.json$'  # Skip large data JSONs
+      - id: check-added-large-files
+        args: ['--maxkb=10000']  # Allow up to 10MB (for model checkpoints)
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: detect-private-key
+      - id: check-ast  # Validate Python syntax
+
+  # Python code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: ['--line-length=100']
+        exclude: '^(Siamese-Network/outputs/|Logistic Regression/model_artifacts/)'
+
+  # Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile', 'black', '--line-length', '100']
+        exclude: '^(Siamese-Network/outputs/|Logistic Regression/model_artifacts/)'
+
+  # Python linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args:
+          - '--max-line-length=100'
+          - '--extend-ignore=E203,E501,W503,E402'  # Black compatibility
+          - '--exclude=outputs,model_artifacts,__pycache__,.git'
+          - '--per-file-ignores=__init__.py:F401'
+        additional_dependencies:
+          - flake8-docstrings
+          - flake8-bugbear
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: ['-ll', '-i', '-x', 'tests/,Siamese-Network/outputs/']
+        exclude: '^tests/'
+
+  # Jupyter notebook cleaning
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.1
+    hooks:
+      - id: nbqa-black
+        args: ['--line-length=100']
+      - id: nbqa-isort
+        args: ['--profile=black']
+
+  # Clear notebook outputs (prevent accidentally committing large outputs)
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.6.1
+    hooks:
+      - id: nbstripout
+        args: ['--keep-output', '--keep-count']
+
+  # Python docstring formatting
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args:
+          - '--convention=numpy'
+          - '--add-ignore=D100,D101,D102,D103,D104,D105,D107'  # Relax missing docstring rules
+        exclude: '^(tests/|Siamese-Network/outputs/|setup.py)'
+
+  # Check for common ML mistakes
+  - repo: local
+    hooks:
+      - id: check-model-files
+        name: Check model checkpoint sizes
+        entry: bash -c 'find . -name "*.pth" -size +100M -exec echo "WARNING: Large model file detected:" {} \;'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-data-leaks
+        name: Check for data file commits
+        entry: bash -c 'if git diff --cached --name-only | grep -E "\.(csv|npy|npz|pkl|pickle)$" | grep -v "test"; then echo "WARNING: Large data files detected in commit. Consider using Git LFS or .gitignore"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: validate-json-configs
+        name: Validate JSON configuration files
+        entry: python -m json.tool
+        language: system
+        files: '^parameters\.json$|^config\.json$'
+        exclude: '^(data/|Siamese-Network/outputs/)'
+
+      - id: check-print-statements
+        name: Check for debug print statements
+        entry: bash -c 'if git diff --cached --name-only -z | xargs -0 grep -n "print(" | grep -v "#.*print("; then echo "WARNING: print() statements found. Consider using logging instead."; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        stages: [commit]
+
+# Configuration for specific tools
+default_language_version:
+  python: python3
+
+# Skip these hooks for specific scenarios
+# Use: SKIP=flake8 git commit -m "message"

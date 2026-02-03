@@ -1,0 +1,56 @@
+================================================================================
+FEATURE EVALUATION SUMMARY REPORT
+================================================================================
+
+Dataset: 28 features, 1818 samples
+Positive class: 909 (50.0%)
+Negative class: 909 (50.0%)
+
+================================================================================
+TOP FEATURES CONSENSUS (Appearing in Multiple Methods)
+================================================================================
+
+Features appearing in multiple top-10 lists:
+  y_diff                                   - 4/4 methods: Coefficient, Permutation, L1 Lasso, RFE
+  length_a                                 - 4/4 methods: Coefficient, Permutation, L1 Lasso, RFE
+  duration_a                               - 4/4 methods: Coefficient, Permutation, L1 Lasso, RFE
+  spatial_gap                              - 4/4 methods: Coefficient, Permutation, L1 Lasso, RFE
+  length_b                                 - 3/4 methods: Coefficient, L1 Lasso, RFE
+  height_diff                              - 3/4 methods: Coefficient, Permutation, L1 Lasso
+  width_diff                               - 3/4 methods: Coefficient, Permutation, L1 Lasso
+  length_diff                              - 3/4 methods: Coefficient, Permutation, L1 Lasso
+  vel_b_mean                               - 3/4 methods: Coefficient, Permutation, RFE
+  duration_b                               - 2/4 methods: Permutation, RFE
+  vel_diff                                 - 2/4 methods: Permutation, RFE
+  y_std_b                                  - 2/4 methods: Coefficient, RFE
+  height_b                                 - 1/4 methods: L1 Lasso
+  y_std_a                                  - 1/4 methods: RFE
+  height_a                                 - 1/4 methods: L1 Lasso
+
+================================================================================
+BEST PERFORMING FEATURE SUBSET
+================================================================================
+
+Subset: Top 10 (Permutation)
+Number of features: 10
+Test ROC-AUC: 0.9871
+Test Average Precision: 0.9826
+CV ROC-AUC: 0.9758 ± 0.0108
+
+================================================================================
+STATISTICAL SIGNIFICANCE SUMMARY
+================================================================================
+
+Significant features (p < 0.05): 9/28 (32.1%)
+
+Most significant features (lowest p-values):
+  y_diff                                   - p=0.000000, coef=-5.4483
+  width_diff                               - p=0.000000, coef=-1.7999
+  spatial_gap                              - p=0.000000, coef=+0.8393
+  length_diff                              - p=0.001240, coef=-2.9711
+  duration_b                               - p=0.002504, coef=-0.4858
+  duration_a                               - p=0.003433, coef=+0.8762
+  vel_diff                                 - p=0.005671, coef=+0.3972
+  y_std_b                                  - p=0.012466, coef=+0.4891
+  y_std_a                                  - p=0.035289, coef=+0.4682
+  conf_a_min                               - p=0.087665, coef=-0.4030

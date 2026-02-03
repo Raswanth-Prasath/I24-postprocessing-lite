@@ -69,6 +69,11 @@ def static_data_reader(default_param, db_param, raw_queue, query_filter, name=No
                 for doc in ijson.items(f, 'item'):
                     cntr += 1
 
+                    # Filter by direction if query_filter is specified
+                    if query_filter and "direction" in query_filter:
+                        if doc.get("direction") != query_filter["direction"]:
+                            continue
+
                     if len(doc["timestamp"]) > 3: 
                         # convert time series from decimal to float
                         doc["timestamp"] = list(map(float, doc["timestamp"]))

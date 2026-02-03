@@ -98,7 +98,7 @@ class SiameseCostFunction(StitchCostFunction):
 
         # Load model
         self.model = SiameseTrajectoryNetwork(**model_config)
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -239,8 +239,268 @@ class SiameseCostFunction(StitchCostFunction):
             return 1e6  # Return high cost on error
 
 
+class LogisticRegressionCostFunction(StitchCostFunction):
+    """
+    Logistic Regression-based cost function.
+
+    Uses a pre-trained sklearn logistic regression model to predict the probability
+    that two fragments belong to the same vehicle. Converts probability to cost.
+
+    Cost Formula:
+        cost = (1 - probability) * scale_factor + time_penalty * time_gap
+    """
+
+    def __init__(
+        self,
+        model_path: str,
+        scale_factor: float = 5.0,
+        time_penalty: float = 0.1,
+    ):
+        """
+        Initialize logistic regression cost function.
+
+        Args:
+            model_path: Path to pickled model package (.pkl file)
+                       Expected: {'model': fitted_lr, 'scaler': fitted_scaler, 'features': feature_list}
+            scale_factor: Scale factor to adjust cost range (default 5.0)
+            time_penalty: Weight for time gap penalty (default 0.1)
+        """
+        import pickle
+        import numpy as np
+
+        self.np = np
+        self.scale_factor = scale_factor
+        self.time_penalty = time_penalty
+
+        # Resolve relative path
+        model_path = self._resolve_path(model_path)
+
+        # Load model package
+        try:
+            with open(model_path, "rb") as f:
+                model_pkg = pickle.load(f)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model from {model_path}: {e}")
+
+        # Extract components
+        self.model = model_pkg.get("model")
+        self.scaler = model_pkg.get("scaler")
+        self.selected_features = model_pkg.get("features", [])
+
+        if self.model is None:
+            raise ValueError("Model package missing 'model' key")
+        if self.scaler is None:
+            raise ValueError("Model package missing 'scaler' key")
+
+        # Initialize feature extractor
+        from utils.features_stitch import StitchFeatureExtractor
+        self.feature_extractor = StitchFeatureExtractor(
+            mode="selected", selected_features=self.selected_features
+        )
+
+        print(f"[LogisticRegressionCostFunction] Loaded model from {model_path}")
+        print(f"[LogisticRegressionCostFunction] Features: {len(self.selected_features)}")
+        print(f"[LogisticRegressionCostFunction] Scale factor: {scale_factor}, Time penalty: {time_penalty}")
+
+    def _resolve_path(self, path: str) -> str:
+        """Resolve relative paths to absolute paths based on project root."""
+        if path is None:
+            return None
+        if Path(path).is_absolute():
+            return path
+        project_root = Path(__file__).parent.parent
+        resolved = project_root / path
+        if resolved.exists():
+            return str(resolved)
+        return path
+
+    def compute_cost(self, track1: dict, track2: dict,
+                    TIME_WIN: float, param: dict) -> float:
+        """
+        Compute cost using logistic regression model.
+
+        Args:
+            track1: First fragment dictionary
+            track2: Second fragment dictionary
+            TIME_WIN: Maximum time window for valid stitching
+            param: Additional parameters
+
+        Returns:
+            Cost value (lower = better match). Returns 1e6 for invalid pairs.
+        """
+        np = self.np
+
+        try:
+            # Check time gap validity
+            if "first_timestamp" in track2 and "last_timestamp" in track1:
+                gap = track2["first_timestamp"] - track1["last_timestamp"]
+            else:
+                gap = track2["timestamp"][0] - track1["timestamp"][-1]
+
+            if gap < 0 or gap > TIME_WIN:
+                return 1e6  # Invalid pair
+
+            # Extract features
+            features = self.feature_extractor.extract_feature_vector(track1, track2)
+
+            # Ensure correct shape for scaler/model
+            if features.ndim == 1:
+                features = features.reshape(1, -1)
+
+            # Scale features
+            features_scaled = self.scaler.transform(features)
+
+            # Predict probability of being same vehicle
+            probability = self.model.predict_proba(features_scaled)[0, 1]
+
+            # Convert probability to cost
+            # Higher probability (same vehicle) → lower cost
+            base_cost = (1.0 - probability) * self.scale_factor
+
+            # Add time penalty for larger gaps
+            time_cost = self.time_penalty * gap
+
+            total_cost = base_cost + time_cost
+
+            return total_cost
+
+        except Exception as e:
+            print(f"[LogisticRegressionCostFunction] Error computing cost: {e}")
+            return 1e6  # Return high cost on error
+
+
+class TorchLogisticCostFunction(StitchCostFunction):
+    """
+    Torch-based logistic regression scorer. Supports loading either a torch
+    state dict (.pth) or converting from the existing sklearn pickle on the fly.
+    """
+
+    def __init__(
+        self,
+        model_path: str,
+        scale_factor: float = 5.0,
+        time_penalty: float = 0.1,
+        device: str = "cpu",
+        save_converted: bool = True,
+    ):
+        import torch
+        import pickle
+        import numpy as np
+
+        self.torch = torch
+        self.np = np
+        self.device = torch.device(device)
+        self.scale_factor = scale_factor
+        self.time_penalty = time_penalty
+
+        resolved = self._resolve_path(model_path)
+        path = Path(resolved)
+
+        if path.suffix == ".pth" and path.exists():
+            state = torch.load(path, map_location=self.device)
+        else:
+            # Convert from sklearn pickle
+            with open(path, "rb") as f:
+                model_pkg = pickle.load(f)
+            lr = model_pkg["model"]
+            scaler = model_pkg["scaler"]
+            features = model_pkg.get("features", [])
+
+            state = {
+                "weight": lr.coef_.astype("float32"),
+                "bias": lr.intercept_.astype("float32"),
+                "scaler_mean": scaler.mean_.astype("float32"),
+                "scaler_scale": scaler.scale_.astype("float32"),
+                "features": features,
+            }
+
+            # Optionally persist converted file next to original
+            if save_converted:
+                out_path = path.with_suffix(".pth")
+                try:
+                    torch.save(state, out_path)
+                    print(f"[TorchLogisticCostFunction] Saved converted model to {out_path}")
+                except Exception as e:
+                    print(f"[TorchLogisticCostFunction] Warning: could not save converted model: {e}")
+
+        # Build tensors
+        self.weight = torch.as_tensor(state["weight"], device=self.device)  # shape (1, F)
+        self.bias = torch.as_tensor(state["bias"].reshape(1), device=self.device)  # shape (1,)
+        self.scaler_mean = torch.as_tensor(state["scaler_mean"], device=self.device)
+        self.scaler_scale = torch.as_tensor(state["scaler_scale"], device=self.device)
+        self.selected_features = state.get("features", [])
+
+        from utils.features_stitch import StitchFeatureExtractor
+        self.feature_extractor = StitchFeatureExtractor(
+            mode="selected", selected_features=self.selected_features
+        )
+
+        print(f"[TorchLogisticCostFunction] Loaded model from {path}")
+        print(f"[TorchLogisticCostFunction] Features: {len(self.selected_features)}")
+        print(f"[TorchLogisticCostFunction] Scale factor: {scale_factor}, Time penalty: {time_penalty}")
+        print(f"[TorchLogisticCostFunction] Device: {self.device}")
+
+    def _resolve_path(self, path: str) -> str:
+        """Resolve relative paths to absolute paths based on project root."""
+        if path is None:
+            return None
+        if Path(path).is_absolute():
+            return path
+        project_root = Path(__file__).parent.parent
+        resolved = project_root / path
+        if resolved.exists():
+            return str(resolved)
+        return path
+
+    def compute_cost(self, track1: dict, track2: dict,
+                    TIME_WIN: float, param: dict) -> float:
+        torch = self.torch
+        np = self.np
+
+        try:
+            if "first_timestamp" in track2 and "last_timestamp" in track1:
+                gap = track2["first_timestamp"] - track1["last_timestamp"]
+            else:
+                gap = track2["timestamp"][0] - track1["timestamp"][-1]
+
+            if gap < 0 or gap > TIME_WIN:
+                return 1e6
+
+            feats = self.feature_extractor.extract_feature_vector(track1, track2)
+            if feats.ndim == 1:
+                feats = feats.reshape(1, -1)
+
+            feats_t = torch.as_tensor(feats, device=self.device, dtype=torch.float32)
+            feats_scaled = (feats_t - self.scaler_mean) / (self.scaler_scale + 1e-8)
+
+            with torch.no_grad():
+                logits = torch.matmul(feats_scaled, self.weight.T) + self.bias
+                prob = torch.sigmoid(logits).item()
+
+            base_cost = (1.0 - prob) * self.scale_factor
+            time_cost = self.time_penalty * gap
+            return float(base_cost + time_cost)
+
+        except Exception as e:
+            print(f"[TorchLogisticCostFunction] Error computing cost: {e}")
+            return 1e6
+
+
 class CostFunctionFactory:
     """Factory for creating cost function instances"""
+
+    @staticmethod
+    def _resolve_path(path: str) -> str:
+        """Resolve relative paths to absolute paths based on project root."""
+        if path is None:
+            return None
+        if Path(path).is_absolute():
+            return path
+        project_root = Path(__file__).parent.parent
+        resolved = project_root / path
+        if resolved.exists():
+            return str(resolved)
+        return path
 
     @staticmethod
     def create(config: dict) -> StitchCostFunction:
@@ -249,10 +509,13 @@ class CostFunctionFactory:
 
         Args:
             config: Configuration dictionary with keys:
-                - type: 'bhattacharyya' or 'siamese'
+                - type: 'bhattacharyya', 'siamese', or 'logistic_regression'
                 - checkpoint_path: Path to model checkpoint (for siamese)
+                - model_path: Path to model package (for logistic_regression)
                 - device: Device for inference (for siamese, optional)
                 - model_config: Model configuration (for siamese, optional)
+                - scale_factor: Cost scaling (for logistic_regression, default 5.0)
+                - time_penalty: Time penalty weight (for logistic_regression, default 0.1)
 
         Returns:
             StitchCostFunction instance
@@ -267,6 +530,7 @@ class CostFunctionFactory:
             if checkpoint_path is None:
                 raise ValueError("checkpoint_path required for siamese cost function")
 
+            checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
             device = config.get('device', None)
             model_config = config.get('model_config', None)
 
@@ -276,9 +540,43 @@ class CostFunctionFactory:
                 model_config=model_config
             )
 
+        elif cost_type in ('logistic_regression', 'lr'):
+            model_path = config.get('model_path')
+            if model_path is None:
+                raise ValueError("model_path required for logistic_regression cost function")
+
+            model_path = CostFunctionFactory._resolve_path(model_path)
+            scale_factor = config.get('scale_factor', 5.0)
+            time_penalty = config.get('time_penalty', 0.1)
+
+            return LogisticRegressionCostFunction(
+                model_path=model_path,
+                scale_factor=scale_factor,
+                time_penalty=time_penalty,
+            )
+
+        elif cost_type in ('torch_logistic', 'torch_lr', 'torch-logistic'):
+            model_path = config.get('model_path')
+            if model_path is None:
+                raise ValueError("model_path required for torch_logistic cost function")
+
+            model_path = CostFunctionFactory._resolve_path(model_path)
+            scale_factor = config.get('scale_factor', 5.0)
+            time_penalty = config.get('time_penalty', 0.1)
+            device = config.get('device', 'cpu')
+            save_converted = config.get('save_converted', True)
+
+            return TorchLogisticCostFunction(
+                model_path=model_path,
+                scale_factor=scale_factor,
+                time_penalty=time_penalty,
+                device=device,
+                save_converted=save_converted,
+            )
+
         else:
             raise ValueError(f"Unknown cost function type: {cost_type}. "
-                           f"Supported: 'bhattacharyya', 'siamese'")
+                           f"Supported: 'bhattacharyya', 'siamese', 'logistic_regression', 'torch_logistic'")
 
 
 # Convenience function for backward compatibility
