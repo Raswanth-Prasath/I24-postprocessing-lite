@@ -1,0 +1,57 @@
+VIF ANALYSIS SUMMARY
+====================
+
+Original features: 47
+Removed features: 7
+Remaining features: 40
+
+Removed (due to VIF > 10):
+  - direction_match: VIF=100000000.00
+  - y_mean_a: VIF=1641.67
+  - velocity_actual_x_mean: VIF=53.15
+  - projection_error_y_max: VIF=49.30
+  - vel_a_mean: VIF=26.67
+  - velocity_fit_x: VIF=15.01
+  - curvature_diff: VIF=12.37
+
+Recommended Features (40 total):
+  - time_gap: VIF=1.26
+  - duration_a: VIF=2.45
+  - duration_b: VIF=2.03
+  - duration_ratio: VIF=1.99
+  - spatial_gap: VIF=1.62
+  - y_mean_b: VIF=2.28
+  - y_diff: VIF=2.18
+  - y_std_a: VIF=1.69
+  - y_std_b: VIF=1.75
+  - vel_b_mean: VIF=2.48
+  - vel_diff: VIF=1.34
+  - vel_ratio: VIF=1.62
+  - length_a: VIF=7.85
+  - length_b: VIF=7.46
+  - length_diff: VIF=6.61
+  - width_a: VIF=5.20
+  - width_b: VIF=4.10
+  - width_diff: VIF=3.72
+  - height_a: VIF=6.16
+  - height_b: VIF=6.02
+  - height_diff: VIF=6.56
+  - conf_a_mean: VIF=3.89
+  - conf_b_mean: VIF=2.88
+  - conf_a_min: VIF=4.40
+  - conf_b_min: VIF=3.22
+  - projection_error_x_mean: VIF=1.54
+  - projection_error_x_std: VIF=6.07
+  - projection_error_x_max: VIF=2.35
+  - projection_error_y_mean: VIF=1.30
+  - projection_error_y_std: VIF=4.22
+  - bhattacharyya_distance: VIF=1.58
+  - bhattacharyya_coeff: VIF=1.37
+  - velocity_fit_y: VIF=1.11
+  - velocity_actual_y_mean: VIF=1.09
+  - velocity_mismatch_x: VIF=5.94
+  - velocity_mismatch_y: VIF=3.92
+  - curvature_a_mean: VIF=6.08
+  - curvature_a_std: VIF=5.59
+  - curvature_b_mean: VIF=5.74
+  - curvature_b_std: VIF=5.52

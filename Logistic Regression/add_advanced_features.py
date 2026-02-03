@@ -10,9 +10,10 @@ from pathlib import Path
 from tqdm import tqdm
 from advanced_features import extract_advanced_features
 
-# Paths
-DATASET_DIR = Path(r"D:\ASU Academics\Thesis & Research\01_Papers\Datasets\I24-3D")
-WORKING_DIR = Path(r"D:\ASU Academics\Thesis & Research\02_Code\Logistic-Regression")
+# Paths (repo-relative by default)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATASET_DIR = PROJECT_ROOT
+WORKING_DIR = Path(__file__).resolve().parent
 DATASETS = ['i', 'ii', 'iii']
 
 

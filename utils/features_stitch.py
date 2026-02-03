@@ -22,6 +22,11 @@ Key Design Principles:
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 
+try:
+    import statsmodels.api as sm
+except Exception:
+    sm = None
+
 
 class StitchFeatureExtractor:
     """
@@ -77,30 +82,28 @@ class StitchFeatureExtractor:
             "direction_match",
         ]
 
-        # Advanced mode = basic + Bhattacharyya + projection + curvature features
+        # Advanced mode = basic + Bhattacharyya + projection + velocity + curvature features
         # (47 total features expected from enhanced_dataset_creation.py)
         self.advanced_features = self.basic_features + [
-            # Bhattacharyya-related (from utils_stitcher_cost.py)
-            "bhattacharyya_distance",
-            "bhattacharyya_coeff",
             "projection_error_x_mean",
             "projection_error_x_std",
             "projection_error_x_max",
             "projection_error_y_mean",
             "projection_error_y_std",
             "projection_error_y_max",
-            "uncertainty_cone_a",
-            # Curvature/acceleration features
-            "curvature_a",
-            "curvature_b",
-            "acceleration_a",
-            "acceleration_b",
-            "jerk_a",
-            "jerk_b",
-            "speed_trend_a",
-            "speed_trend_b",
-            "direction_deviation_a",
-            "direction_deviation_b",
+            "bhattacharyya_distance",
+            "bhattacharyya_coeff",
+            "velocity_fit_x",
+            "velocity_fit_y",
+            "velocity_actual_x_mean",
+            "velocity_actual_y_mean",
+            "velocity_mismatch_x",
+            "velocity_mismatch_y",
+            "curvature_a_mean",
+            "curvature_a_std",
+            "curvature_b_mean",
+            "curvature_b_std",
+            "curvature_diff",
         ]
 
         # Validate mode
@@ -293,10 +296,6 @@ class StitchFeatureExtractor:
         """
         Extract advanced features (Bhattacharyya, projection, curvature).
 
-        Note: These features require additional computation and are optional.
-        Currently returns zeros as placeholders - can be enhanced with actual
-        computation if needed for training.
-
         Args:
             frag_a: First fragment
             frag_b: Second fragment
@@ -304,40 +303,189 @@ class StitchFeatureExtractor:
         Returns:
             Dictionary with advanced feature values
         """
-        features = {}
+        features = self._compute_bhattacharyya_features(frag_a, frag_b)
 
-        # Bhattacharyya-related (requires WLS fitting, for now use placeholders)
-        features["bhattacharyya_distance"] = 0.0
-        features["bhattacharyya_coeff"] = 0.0
-
-        # Projection error features
-        features["projection_error_x_mean"] = 0.0
-        features["projection_error_x_std"] = 0.0
-        features["projection_error_x_max"] = 0.0
-        features["projection_error_y_mean"] = 0.0
-        features["projection_error_y_std"] = 0.0
-        features["projection_error_y_max"] = 0.0
-
-        # Uncertainty cone
-        features["uncertainty_cone_a"] = 0.0
-
-        # Curvature/acceleration features
-        features["curvature_a"] = 0.0
-        features["curvature_b"] = 0.0
-        features["acceleration_a"] = 0.0
-        features["acceleration_b"] = 0.0
-        features["jerk_a"] = 0.0
-        features["jerk_b"] = 0.0
-
-        # Speed trend
-        features["speed_trend_a"] = 0.0
-        features["speed_trend_b"] = 0.0
-
-        # Direction deviation
-        features["direction_deviation_a"] = 0.0
-        features["direction_deviation_b"] = 0.0
+        curv_a_mean, curv_a_std = self._compute_trajectory_curvature(frag_a)
+        curv_b_mean, curv_b_std = self._compute_trajectory_curvature(frag_b)
+        features["curvature_a_mean"] = curv_a_mean
+        features["curvature_a_std"] = curv_a_std
+        features["curvature_b_mean"] = curv_b_mean
+        features["curvature_b_std"] = curv_b_std
+        features["curvature_diff"] = abs(curv_a_mean - curv_b_mean)
 
         return features
+
+    @staticmethod
+    def _bhattacharyya_distance(mu1: np.ndarray, mu2: np.ndarray,
+                                cov1: np.ndarray, cov2: np.ndarray) -> float:
+        """Compute Bhattacharyya distance between two Gaussian distributions."""
+        try:
+            mu = mu1 - mu2
+            cov = (cov1 + cov2) / 2
+
+            det = np.linalg.det(cov)
+            det1 = np.linalg.det(cov1)
+            det2 = np.linalg.det(cov2)
+
+            if det <= 0 or det1 <= 0 or det2 <= 0:
+                return 999.0
+
+            term1 = 0.125 * np.dot(np.dot(mu.T, np.linalg.inv(cov)), mu)
+            term2 = 0.5 * np.log(det / (np.sqrt(det1) * np.sqrt(det2)))
+            dist = term1 + term2
+
+            if np.isnan(dist) or np.isinf(dist) or dist < -999:
+                return 999.0
+
+            return float(dist)
+        except Exception:
+            return 999.0
+
+    def _weighted_least_squares(
+        self, t: np.ndarray, x: np.ndarray, y: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> Tuple[List[float], List[float]]:
+        """Fit linear model using weighted least squares."""
+        try:
+            if sm is not None:
+                t_const = sm.add_constant(t)
+                modelx = sm.WLS(x, t_const, weights=weights)
+                resx = modelx.fit()
+                fitx = [resx.params[1], resx.params[0]]
+
+                modely = sm.WLS(y, t_const, weights=weights)
+                resy = modely.fit()
+                fity = [resy.params[1], resy.params[0]]
+                return fitx, fity
+
+            # Fallback: weighted polyfit if statsmodels unavailable
+            if weights is not None:
+                fitx = np.polyfit(t, x, 1, w=weights)
+                fity = np.polyfit(t, y, 1, w=weights)
+            else:
+                fitx = np.polyfit(t, x, 1)
+                fity = np.polyfit(t, y, 1)
+            return [float(fitx[0]), float(fitx[1])], [float(fity[0]), float(fity[1])]
+        except Exception:
+            return [0.0, float(np.mean(x))], [0.0, float(np.mean(y))]
+
+    def _compute_bhattacharyya_features(self, frag_a: Dict, frag_b: Dict) -> Dict[str, float]:
+        """Compute Bhattacharyya distance-based features between two fragments."""
+        features: Dict[str, float] = {}
+
+        try:
+            t1 = np.array(frag_a["timestamp"])
+            t2 = np.array(frag_b["timestamp"])
+            x1 = np.array(frag_a["x_position"])
+            x2 = np.array(frag_b["x_position"])
+            y1 = np.array(frag_a["y_position"])
+            y2 = np.array(frag_b["y_position"])
+
+            toffset = min(t1[0], t2[0])
+            t1 = t1 - toffset
+            t2 = t2 - toffset
+
+            n1 = min(len(t1), 25)
+            t1_fit = t1[-n1:]
+            x1_fit = x1[-n1:]
+            y1_fit = y1[-n1:]
+
+            n2 = min(len(t2), 25)
+            t2_meas = t2[:n2]
+            x2_meas = x2[:n2]
+            y2_meas = y2[:n2]
+
+            weights1 = np.linspace(1e-6, 1, len(t1_fit))
+            fitx, fity = self._weighted_least_squares(t1_fit, x1_fit, y1_fit, weights1)
+
+            x_projected = fitx[0] * t2_meas + fitx[1]
+            y_projected = fity[0] * t2_meas + fity[1]
+
+            x_errors = x2_meas - x_projected
+            y_errors = y2_meas - y_projected
+
+            features["projection_error_x_mean"] = float(np.mean(x_errors))
+            features["projection_error_x_std"] = float(np.std(x_errors))
+            features["projection_error_x_max"] = float(np.max(np.abs(x_errors)))
+
+            features["projection_error_y_mean"] = float(np.mean(y_errors))
+            features["projection_error_y_std"] = float(np.std(y_errors))
+            features["projection_error_y_max"] = float(np.max(np.abs(y_errors)))
+
+            mu1 = np.array([np.mean(x_projected), np.mean(y_projected)])
+            mu2 = np.array([np.mean(x2_meas), np.mean(y2_meas)])
+
+            var_x1 = np.var(x_projected) + 1e-6
+            var_y1 = np.var(y_projected) + 1e-6
+            var_x2 = np.var(x2_meas) + 1e-6
+            var_y2 = np.var(y2_meas) + 1e-6
+
+            cov1 = np.diag([var_x1, var_y1])
+            cov2 = np.diag([var_x2, var_y2])
+
+            bd = self._bhattacharyya_distance(mu1, mu2, cov1, cov2)
+            features["bhattacharyya_distance"] = float(bd)
+            features["bhattacharyya_coeff"] = float(np.exp(-bd) if bd < 100 else 0.0)
+
+            features["velocity_fit_x"] = float(fitx[0])
+            features["velocity_fit_y"] = float(fity[0])
+
+            if len(t2) > 1:
+                dt_b = np.diff(t2)
+                dx_b = np.diff(x2)
+                dy_b = np.diff(y2)
+                vx_b = dx_b / (dt_b + 1e-6)
+                vy_b = dy_b / (dt_b + 1e-6)
+
+                features["velocity_actual_x_mean"] = float(np.mean(vx_b[:n2]))
+                features["velocity_actual_y_mean"] = float(np.mean(vy_b[:n2]))
+                features["velocity_mismatch_x"] = float(abs(fitx[0] - np.mean(vx_b[:n2])))
+                features["velocity_mismatch_y"] = float(abs(fity[0] - np.mean(vy_b[:n2])))
+            else:
+                features["velocity_actual_x_mean"] = 0.0
+                features["velocity_actual_y_mean"] = 0.0
+                features["velocity_mismatch_x"] = 0.0
+                features["velocity_mismatch_y"] = 0.0
+
+        except Exception:
+            features["projection_error_x_mean"] = 999.0
+            features["projection_error_x_std"] = 999.0
+            features["projection_error_x_max"] = 999.0
+            features["projection_error_y_mean"] = 999.0
+            features["projection_error_y_std"] = 999.0
+            features["projection_error_y_max"] = 999.0
+            features["bhattacharyya_distance"] = 999.0
+            features["bhattacharyya_coeff"] = 0.0
+            features["velocity_fit_x"] = 0.0
+            features["velocity_fit_y"] = 0.0
+            features["velocity_actual_x_mean"] = 0.0
+            features["velocity_actual_y_mean"] = 0.0
+            features["velocity_mismatch_x"] = 999.0
+            features["velocity_mismatch_y"] = 999.0
+
+        return features
+
+    @staticmethod
+    def _compute_trajectory_curvature(frag: Dict) -> Tuple[float, float]:
+        """Compute trajectory curvature features (mean, std)."""
+        try:
+            x = np.array(frag["x_position"])
+            y = np.array(frag["y_position"])
+
+            if len(x) < 3:
+                return 0.0, 0.0
+
+            dx = np.gradient(x)
+            dy = np.gradient(y)
+            ddx = np.gradient(dx)
+            ddy = np.gradient(dy)
+
+            numerator = np.abs(dx * ddy - dy * ddx)
+            denominator = np.power(dx**2 + dy**2, 1.5) + 1e-6
+            curvature = numerator / denominator
+
+            return float(np.mean(curvature)), float(np.std(curvature))
+        except Exception:
+            return 0.0, 0.0
 
     def get_feature_names(self) -> List[str]:
         """

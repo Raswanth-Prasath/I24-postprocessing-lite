@@ -52,13 +52,14 @@ def load_top_features_from_permutation(n_features=20):
     return perm_df.head(n_features)['feature'].tolist()
 
 
-def train_model_with_selected_features(dataset='advanced', feature_subset='optimal'):
+def train_model_with_selected_features(dataset='advanced', feature_subset='optimal', model_name=None):
     """
     Train logistic regression with selected features
 
     Args:
         dataset: 'advanced' (47 features) or 'combined' (28 features)
-        feature_subset: 'minimal' (5 features), 'optimal' (10-20 features), or list of feature names
+        feature_subset: 'minimal', 'optimal', 'vif', or list of feature names
+        model_name: Optional name for saved model artifact (default auto)
     """
     print("="*80)
     print(f"TRAINING MODEL: {dataset.upper()} dataset, {feature_subset} features")
@@ -71,6 +72,12 @@ def train_model_with_selected_features(dataset='advanced', feature_subset='optim
             selected_features = FEATURE_SUBSETS['advanced_minimal_5']
         elif feature_subset == 'optimal':
             selected_features = load_top_features_from_permutation(20)
+        elif feature_subset == 'vif':
+            vif_file = WORKING_DIR / 'feature_selection_outputs' / 'vif_recommended_features.txt'
+            if not vif_file.exists():
+                print(f"Error: {vif_file} not found. Run vif_analysis.py first.")
+                return None
+            selected_features = [line.strip() for line in vif_file.read_text().splitlines() if line.strip()]
         else:
             selected_features = feature_subset
     else:  # combined
@@ -163,7 +170,9 @@ def train_model_with_selected_features(dataset='advanced', feature_subset='optim
     print(coef_df.to_string(index=False))
 
     # Save model
-    model_name = f"{dataset}_{feature_subset}_{len(selected_features)}features"
+    if model_name is None:
+        name_tag = feature_subset if isinstance(feature_subset, str) else "custom"
+        model_name = f"{dataset}_{name_tag}_{len(selected_features)}features"
     model_file = OUTPUT_DIR / f"{model_name}.pkl"
 
     model_package = {

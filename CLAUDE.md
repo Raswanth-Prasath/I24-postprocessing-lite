@@ -9,13 +9,16 @@ Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with lear
 
 ## Latest Results (Feb 3, 2026) - Scenario i
 
-| Method | MOTA | MOTP | Precision | Recall | FP | IDsw | Trajectories |
-|--------|------|------|-----------|--------|------|------|--------------|
-| **Bhattacharyya** | **0.794** | 0.645 | **0.96** | 0.83 | 3939 | 179 | 484 |
-| **Logistic Regression** | 0.740 | 0.645 | 0.90 | 0.83 | 10534 | 182 | 506 |
-| Siamese (testing) | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| Method | MOTA | MOTP | Precision | Recall | FP | Fgmt/GT | Sw/GT |
+|--------|------|------|-----------|--------|------|---------|-------|
+| **Bhattacharyya** | **0.794** | 0.645 | **0.96** | 0.83 | **3939** | **1.55** | **0.57** |
+| Logistic Regression | 0.740 | 0.645 | 0.90 | 0.83 | 10534 | 1.62 | 0.58 |
+| Siamese BiLSTM | 0.637 | 0.645 | 0.81 | 0.83 | 23001 | 1.98 | 0.62 |
 
-**Key Finding**: Bhattacharyya baseline outperforms Logistic Regression on scenario i. LR has significantly more false positives (10534 vs 3939).
+**Key Finding**: Bhattacharyya baseline outperforms both learned methods on scenario i:
+- LR: 2.7× more FPs (10534 vs 3939), MOTA drops 0.054
+- Siamese: 5.8× more FPs (23001 vs 3939), MOTA drops 0.157
+- All methods achieve same recall (0.83) but precision varies significantly (0.96 → 0.90 → 0.81)
 
 ### Configuration for Each Cost Function
 
@@ -89,8 +92,9 @@ I24-postprocessing-lite/
 │   ├── reconciliation.py      # Trajectory smoothing (223 lines)
 │   └── data_feed.py           # Data reader (132 lines)
 │
-├── Evaluation
-│   └── mot_i24.py             # MOT metrics (MOTA/MOTP/IDF1) (315 lines)
+├── Evaluation & Utilities
+│   ├── mot_i24.py             # MOT metrics (MOTA/MOTP/Fgmt/Sw) (320 lines)
+│   └── diagnose_json.py       # JSON diagnostic/fix utility
 │
 ├── Configuration
 │   └── parameters.json        # Pipeline config with cost_function section
@@ -128,6 +132,8 @@ I24-postprocessing-lite/
 | **Empty REC_i.json output** | Restored `mp.Manager()` for shared queues/dicts | `pp_lite.py` |
 | **Missing direction filter** | Added filter in static_data_reader | `data_feed.py:69-73` |
 | **Siamese cost mismatch** | Adjusted thresholds (0.8/1.0 vs 3/4) | `parameters.json` |
+| **Malformed JSON output** | Created diagnose_json.py utility | `diagnose_json.py` |
+| **Missing MOT metrics** | Added Fgmt/GT and Sw/GT to output | `mot_i24.py` |
 
 ### Not Yet Implemented
 
@@ -460,8 +466,14 @@ python evaluate_siamese.py
 ### Quick Test (single cost function)
 1. Edit `parameters.json` to set desired `cost_function`
 2. Run `python pp_lite.py i`
-3. If REC_i.json starts with `[,{`, fix: `sed -i 's/^\[,/[/' REC_i.json`
+3. If JSON issues, run: `python diagnose_json.py REC_i.json --fix`
 4. Run `python mot_i24.py i`
+
+### Diagnose/Fix JSON Issues
+```bash
+python diagnose_json.py REC_i.json          # Diagnose only
+python diagnose_json.py REC_i.json --fix    # Auto-fix common issues
+```
 
 ---
 

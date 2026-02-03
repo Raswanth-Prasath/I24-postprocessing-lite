@@ -9,6 +9,7 @@ This script generates a comprehensive training dataset by:
 5. Balancing the dataset and saving for training
 """
 
+import argparse
 import json
 import numpy as np
 import pandas as pd
@@ -17,26 +18,38 @@ from typing import List, Dict, Tuple
 from collections import defaultdict
 from tqdm import tqdm
 
-# Dataset paths
-DATASET_DIR = Path(r"D:\ASU Academics\Thesis & Research\01_Papers\Datasets\I24-3D")
+# Dataset paths (repo-relative by default)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATASET_DIR = PROJECT_ROOT
 DATASETS = ['i', 'ii', 'iii']
 
 class DatasetGenerator:
-    def __init__(self, max_time_gap=5.0, max_spatial_gap=200, y_threshold=5.0):
+    def __init__(
+        self,
+        max_time_gap=5.0,
+        max_spatial_gap=200,
+        y_threshold=5.0,
+        include_advanced: bool = False,
+        data_dir: Path = None,
+    ):
         """
         Args:
             max_time_gap: Maximum time gap between fragments to consider (seconds)
             max_spatial_gap: Maximum spatial gap between fragments (feet)
             y_threshold: Maximum lateral distance to consider same lane (feet)
+            include_advanced: If True, include Bhattacharyya/curvature features
+            data_dir: Directory containing GT_*.json and RAW_*.json
         """
         self.max_time_gap = max_time_gap
         self.max_spatial_gap = max_spatial_gap
         self.y_threshold = y_threshold
+        self.include_advanced = include_advanced
+        self.data_dir = Path(data_dir) if data_dir is not None else DATASET_DIR
 
     def load_dataset(self, dataset_name: str) -> Tuple[List[Dict], List[Dict]]:
         """Load GT and RAW data for a specific dataset"""
-        gt_path = DATASET_DIR / f"GT_{dataset_name}.json"
-        raw_path = DATASET_DIR / f"RAW_{dataset_name}.json"
+        gt_path = self.data_dir / f"GT_{dataset_name}.json"
+        raw_path = self.data_dir / f"RAW_{dataset_name}.json"
 
         with open(gt_path, 'r') as f:
             gt_data = json.load(f)
@@ -158,6 +171,24 @@ class DatasetGenerator:
 
         return features
 
+    def extract_advanced_features(self, frag_a: Dict, frag_b: Dict) -> Dict[str, float]:
+        """Extract advanced Bhattacharyya and curvature features."""
+        try:
+            from advanced_features import extract_advanced_features
+        except Exception as exc:
+            raise RuntimeError(
+                "Advanced feature extraction requested, but dependencies are missing. "
+                "Install statsmodels or run without --advanced."
+            ) from exc
+        return extract_advanced_features(frag_a, frag_b)
+
+    def extract_features(self, frag_a: Dict, frag_b: Dict) -> Dict[str, float]:
+        """Extract basic features plus optional advanced features."""
+        features = self.extract_basic_features(frag_a, frag_b)
+        if self.include_advanced:
+            features.update(self.extract_advanced_features(frag_a, frag_b))
+        return features
+
     def generate_positive_pairs(self, raw_fragments: List[Dict]) -> List[Tuple[int, int, Dict]]:
         """Generate positive pairs (same vehicle)"""
         positive_pairs = []
@@ -177,7 +208,7 @@ class DatasetGenerator:
                     frag_b = raw_fragments[idx_b]
 
                     if self.is_candidate_pair(frag_a, frag_b):
-                        features = self.extract_basic_features(frag_a, frag_b)
+                        features = self.extract_features(frag_a, frag_b)
                         positive_pairs.append((idx_a, idx_b, features))
 
         return positive_pairs
@@ -258,12 +289,12 @@ class DatasetGenerator:
                                 if time_gap > self.max_time_gap * 2:  # 2x relaxed
                                     continue
 
-                                features = self.extract_basic_features(frag_a, frag_b)
+                                features = self.extract_features(frag_a, frag_b)
                                 negative_pairs.append((idx_a, idx_b, features))
                             else:
                                 # Strict mode: must be candidate pairs
                                 if self.is_candidate_pair(frag_a, frag_b):
-                                    features = self.extract_basic_features(frag_a, frag_b)
+                                    features = self.extract_features(frag_a, frag_b)
                                     negative_pairs.append((idx_a, idx_b, features))
 
                             if num_negatives and len(negative_pairs) >= num_negatives:
@@ -353,7 +384,7 @@ class DatasetGenerator:
                      output_path: str = "training_dataset.npz"):
         """Save dataset to disk"""
         # Use absolute path
-        output_file = Path(r"D:\ASU Academics\Thesis & Research\02_Code\Logistic-Regression") / output_path
+        output_file = Path(__file__).resolve().parent / output_path
         np.savez_compressed(
             output_file,
             X=X,
@@ -366,11 +397,22 @@ class DatasetGenerator:
 
 def main():
     """Main execution function"""
+    parser = argparse.ArgumentParser(description="Create training datasets for fragment association")
+    parser.add_argument("--advanced", action="store_true", help="Include Bhattacharyya/curvature features")
+    parser.add_argument("--output", default="training_dataset_combined.npz", help="Output NPZ filename")
+    parser.add_argument("--data-dir", default=str(DATASET_DIR), help="Directory containing GT_*.json and RAW_*.json")
+    parser.add_argument("--max-time-gap", type=float, default=5.0, help="Max time gap (seconds)")
+    parser.add_argument("--max-spatial-gap", type=float, default=200.0, help="Max spatial gap (feet)")
+    parser.add_argument("--y-threshold", type=float, default=5.0, help="Max lateral distance (feet)")
+    args = parser.parse_args()
+
     # Create dataset generator
     generator = DatasetGenerator(
-        max_time_gap=5.0,
-        max_spatial_gap=200,
-        y_threshold=5.0
+        max_time_gap=args.max_time_gap,
+        max_spatial_gap=args.max_spatial_gap,
+        y_threshold=args.y_threshold,
+        include_advanced=args.advanced,
+        data_dir=args.data_dir,
     )
 
     # Generate combined dataset
@@ -378,7 +420,7 @@ def main():
 
     if len(X) > 0:
         # Save dataset
-        generator.save_dataset(X, y, feature_names, "training_dataset_combined.npz")
+        generator.save_dataset(X, y, feature_names, args.output)
 
         # Print basic statistics
         print("\n" + "="*60)

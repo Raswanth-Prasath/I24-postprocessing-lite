@@ -8,7 +8,10 @@ Includes sophisticated features based on the baseline cost function:
 """
 
 import numpy as np
-import statsmodels.api as sm
+try:
+    import statsmodels.api as sm
+except Exception:
+    sm = None
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -64,22 +67,33 @@ def weighted_least_squares(t, x, y, weights=None):
         (fitx, fity): Tuples of (slope, intercept) for x and y
     """
     try:
-        t_const = sm.add_constant(t)
+        if sm is not None:
+            t_const = sm.add_constant(t)
 
-        # Fit x
-        modelx = sm.WLS(x, t_const, weights=weights)
-        resx = modelx.fit()
-        fitx = [resx.params[1], resx.params[0]]  # [slope, intercept]
+            # Fit x
+            modelx = sm.WLS(x, t_const, weights=weights)
+            resx = modelx.fit()
+            fitx = [resx.params[1], resx.params[0]]  # [slope, intercept]
 
-        # Fit y
-        modely = sm.WLS(y, t_const, weights=weights)
-        resy = modely.fit()
-        fity = [resy.params[1], resy.params[0]]  # [slope, intercept]
+            # Fit y
+            modely = sm.WLS(y, t_const, weights=weights)
+            resy = modely.fit()
+            fity = [resy.params[1], resy.params[0]]  # [slope, intercept]
 
-        return fitx, fity
+            return fitx, fity
+
+        # Fallback: weighted polyfit if statsmodels unavailable
+        if weights is not None:
+            fitx = np.polyfit(t, x, 1, w=weights)
+            fity = np.polyfit(t, y, 1, w=weights)
+        else:
+            fitx = np.polyfit(t, x, 1)
+            fity = np.polyfit(t, y, 1)
+
+        return [float(fitx[0]), float(fitx[1])], [float(fity[0]), float(fity[1])]
 
     except Exception:
-        # Fallback to simple mean if WLS fails
+        # Fallback to simple mean if fitting fails
         return [0.0, np.mean(x)], [0.0, np.mean(y)]
 
 
