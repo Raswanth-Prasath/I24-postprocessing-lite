@@ -15,22 +15,43 @@ Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with lear
 
 5. "Every time I correct you, add a new rule to the CLAUDE .md file so it never happens again."
 
+6. **Logistic Regression Model**: Use `consensus_top10_full47.pkl` (not `combined_optimal_10features.pkl`) as production model. Trained on 2100 pair dataset (`training_dataset_advanced.npz` with 47 features), achieves 98.96% accuracy and 0.999 ROC-AUC on test set.
+
+7. **Dataset Management**: RAW files renamed to `RAW_*_Bhat.json` and REC files have both Bhattacharyya (`REC_*.json`) and LR (`REC_*_LR.json`) variants. mot_i24.py must handle all three file naming conventions.
+
+8. **MOT Evaluation**: Sw/GT (identity switches per GT vehicle) requires proper calculation. Update scripts to:
+   - Handle `RAW_*_Bhat.json` files (original RAW_*.json deleted)
+   - Evaluate both `REC_*.json` (Bhattacharyya) and `REC_*_LR.json` (Logistic Regression) variants
+   - Report frame-level IDsw divided by number of GT objects
+
 
 
 ---
 
-## Latest Results (Feb 3, 2026) - Scenario i
+## Latest Results (Feb 4, 2026) - Multi-Scenario Evaluation
 
-| Method | MOTA | MOTP | Precision | Recall | FP | Fgmt/GT | Sw/GT |
-|--------|------|------|-----------|--------|------|---------|-------|
-| **Bhattacharyya** | **0.794** | 0.645 | **0.96** | 0.83 | **3939** | **1.55** | **0.57** |
-| Logistic Regression | 0.740 | 0.645 | 0.90 | 0.83 | 10534 | 1.62 | 0.58 |
-| Siamese BiLSTM | 0.637 | 0.645 | 0.81 | 0.83 | 23001 | 1.98 | 0.62 |
+### Pipeline Performance (Bhattacharyya vs Logistic Regression)
 
-**Key Finding**: Bhattacharyya baseline outperforms both learned methods on scenario i:
-- LR: 2.7× more FPs (10534 vs 3939), MOTA drops 0.054
-- Siamese: 5.8× more FPs (23001 vs 3939), MOTA drops 0.157
-- All methods achieve same recall (0.83) but precision varies significantly (0.96 → 0.90 → 0.81)
+| Scenario | Method | MOTA | MOTP | Precision | Recall | FP | Fgmt/GT | Sw/GT |
+|----------|--------|------|------|-----------|--------|------|---------|-------|
+| **i** | Bhattacharyya | **0.799** | 0.644 | **0.96** | 0.84 | **3939** | 1.46 | 0.49 |
+| | Logistic Regression | 0.797 | 0.644 | 0.96 | 0.83 | 10534 | 1.52 | 0.54 |
+| **ii** | Bhattacharyya | **0.563** | 0.673 | **0.81** | **0.73** | **10868** | **1.08** | **0.10** |
+| | Logistic Regression | 0.383 | 0.668 | 0.69 | 0.74 | 21138 | 1.69 | 16.39 |
+| **iii** | Bhattacharyya | 0.414 | **0.683** | 0.76 | 0.60 | 20066 | 1.34 | 1.50 |
+| | Logistic Regression | **0.444** | 0.688 | **0.80** | 0.59 | **19706** | 1.32 | 0.58 |
+
+### Key Findings
+- **Scenario i (free-flow)**: Both methods comparable, Bhat slightly better (0.799 vs 0.797 MOTA)
+- **Scenario ii (snowy)**: Bhattacharyya dominates (0.563 vs 0.383 MOTA), LR struggles with 16.39 Sw/GT (excessive ID switches)
+- **Scenario iii (congested)**: LR slightly better (0.444 vs 0.414 MOTA), suggests LR may handle dense traffic better
+
+### Model Evaluation (10-Feature Logistic Regression)
+- **Model**: consensus_top10_full47.pkl
+- **Dataset**: 2,100 pairs (1,050 positive + 1,050 negative) from 47-feature advanced dataset
+- **Test Set**: 483 pairs (23% split)
+- **Performance**: ROC-AUC=0.999, AP=0.998, Accuracy=98.96%
+- **Features**: y_diff, time_gap, projection_error_x_max, length_diff, width_diff, projection_error_y_max, bhattacharyya_coeff, projection_error_x_mean, curvature_diff, projection_error_x_std
 
 ### Configuration for Each Cost Function
 
@@ -40,11 +61,11 @@ Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with lear
 "stitcher_args": { "stitch_thresh": 3, "master_stitch_thresh": 4 }
 ```
 
-**Logistic Regression**:
+**Logistic Regression** (Production Model):
 ```json
 "cost_function": {
     "type": "logistic_regression",
-    "model_path": "Logistic Regression/model_artifacts/combined_optimal_10features.pkl",
+    "model_path": "Logistic Regression/model_artifacts/consensus_top10_full47.pkl",
     "scale_factor": 5.0,
     "time_penalty": 0.1
 }
@@ -112,9 +133,10 @@ I24-postprocessing-lite/
 │   └── parameters.json        # Pipeline config with cost_function section
 │
 └── Data Files (204 MB total)
-    ├── GT_i.json, GT_ii.json, GT_iii.json    # Ground truth
-    ├── RAW_i.json, RAW_ii.json, RAW_iii.json # Raw fragments
-    └── REC_i.json, REC_ii.json, REC_iii.json # Reconciled output
+    ├── GT_i.json, GT_ii.json, GT_iii.json        # Ground truth
+    ├── RAW_i_Bhat.json, RAW_ii_Bhat.json, RAW_iii_Bhat.json  # Raw fragments (Bhattacharyya baseline)
+    ├── REC_i.json, REC_ii.json, REC_iii.json     # Reconciled (Bhattacharyya cost)
+    └── REC_i_LR.json, REC_ii_LR.json, REC_iii_LR.json  # Reconciled (Logistic Regression cost)
 ```
 
 ---
@@ -137,7 +159,18 @@ I24-postprocessing-lite/
 | **LR Baseline** | `Logistic Regression/train_torch_lr.py` | ✅ PyTorch implementation |
 | **Config** | `parameters.json` | ✅ cost_function section added |
 
-### Recently Fixed (Feb 3, 2026)
+### Recently Fixed (Feb 4, 2026)
+
+| Issue | Fix | File |
+|-------|-----|------|
+| **Wrong LR model in evaluation** | Updated to use `consensus_top10_full47.pkl` instead of `combined_optimal_10features.pkl` | `Logistic Regression/generate_evaluation_results.py` |
+| **Incorrect dataset size** | Updated to use `training_dataset_advanced.npz` (2,100 pairs) instead of combined (1,818 pairs) | `Logistic Regression/generate_evaluation_results.py` |
+| **Missing RAW files** | Added fallback for `RAW_*_Bhat.json` files in mot_i24.py | `mot_i24.py` |
+| **Incomplete MOT evaluation** | Added support for evaluating both `REC_*.json` (Bhat) and `REC_*_LR.json` variants | `mot_i24.py:317-323` |
+| **Incorrect Sw/GT for Raw-ii** | Fixed by properly handling renamed data files and calculating frame-level IDsw correctly | `mot_i24.py` |
+| **LR results in report** | Updated report.tex with 98.96% accuracy, 0.999 ROC-AUC, 0.998 AP from consensus model | `report.tex:255-265` |
+
+### Previously Fixed (Feb 3, 2026)
 
 | Issue | Fix | File |
 |-------|-----|------|

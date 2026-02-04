@@ -1,6 +1,7 @@
 import motmetrics as mm
 import numpy as np
 import json
+import os
 from collections import defaultdict
 
 # File paths
@@ -297,12 +298,14 @@ if __name__ == '__main__':
     raw_file = f'./RAW_{suffix}.json'
     rec_file = f'./REC_{suffix}.json'
 
+    # Handle RAW_*_Bhat.json files if standard names don't exist
+    raw_bhat_file = f'./RAW_{suffix}_Bhat.json'
+    if not os.path.exists(raw_file) and os.path.exists(raw_bhat_file):
+        raw_file = raw_bhat_file
+
     print("=" * 60)
     print(f"MOT Metrics for I24 Trajectories (suffix: {suffix})")
     print("=" * 60)
-
-    # Check which files exist
-    import os
 
     # Evaluate RAW vs GT
     if os.path.exists(gt_file) and os.path.exists(raw_file):
@@ -313,10 +316,18 @@ if __name__ == '__main__':
 
     # Evaluate REC vs GT (if REC exists)
     if os.path.exists(gt_file) and os.path.exists(rec_file):
-        print(f"\n--- REC_{suffix} vs GT_{suffix} ---")
+        print(f"\n--- REC_{suffix} (Bhattacharyya) vs GT_{suffix} ---")
         rec_summary = compute_mot_metrics(gt_file, rec_file, f'REC_{suffix}', IOU_THRESHOLD)
     else:
         print(f"\nSkipping REC: REC_{suffix}.json not found")
+
+    # Evaluate REC_LR vs GT (if REC_LR exists)
+    rec_lr_file = f'./REC_{suffix}_LR.json'
+    if os.path.exists(gt_file) and os.path.exists(rec_lr_file):
+        print(f"\n--- REC_{suffix} (Logistic Regression) vs GT_{suffix} ---")
+        rec_lr_summary = compute_mot_metrics(gt_file, rec_lr_file, f'REC_{suffix}_LR', IOU_THRESHOLD)
+    else:
+        print(f"\nSkipping REC_LR: REC_{suffix}_LR.json not found")
 
     # GT vs GT sanity check
     if os.path.exists(gt_file):
