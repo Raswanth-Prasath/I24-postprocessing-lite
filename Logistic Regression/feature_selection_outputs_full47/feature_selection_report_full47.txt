@@ -1,0 +1,99 @@
+================================================================================
+COMPREHENSIVE FEATURE SELECTION REPORT (47 FEATURES)
+================================================================================
+
+Generated: 2026-02-03T14:31:19.844844
+
+================================================================================
+BEST PERFORMING SUBSETS
+================================================================================
+
+  Top 25 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
+  Top 30 (Permutation)                ROC-AUC: 0.9998  AP: 0.9997
+  Top 30 (RFE)                        ROC-AUC: 0.9997  AP: 0.9997
+  Top 25 (RFE)                        ROC-AUC: 0.9997  AP: 0.9997
+  Top 30 (Coefficient)                ROC-AUC: 0.9997  AP: 0.9997
+  Top 35 (Permutation)                ROC-AUC: 0.9997  AP: 0.9997
+  Top 40 (Permutation)                ROC-AUC: 0.9997  AP: 0.9997
+  Top 20 (RFE)                        ROC-AUC: 0.9997  AP: 0.9996
+  Top 40 (RFE)                        ROC-AUC: 0.9996  AP: 0.9996
+  Top 40 (Coefficient)                ROC-AUC: 0.9996  AP: 0.9996
+
+================================================================================
+OPTIMAL FEATURE SET
+================================================================================
+
+Best subset: Top 25 (Permutation)
+Number of features: 25
+Test ROC-AUC: 0.9998
+Test AP: 0.9998
+CV ROC-AUC: 0.9998 ± 0.0002
+
+Features:
+  - projection_error_x_max
+  - y_diff
+  - projection_error_y_max
+  - time_gap
+  - bhattacharyya_coeff
+  - length_diff
+  - width_diff
+  - vel_ratio
+  - curvature_b_mean
+  - curvature_diff
+  - vel_b_mean
+  - velocity_actual_x_mean
+  - projection_error_x_mean
+  - duration_a
+  - curvature_b_std
+  - y_std_a
+  - curvature_a_mean
+  - spatial_gap
+  - velocity_mismatch_y
+  - conf_b_min
+  - length_a
+  - projection_error_x_std
+  - height_a
+  - length_b
+  - bhattacharyya_distance
+
+================================================================================
+CONSENSUS RANKING (TOP 20)
+================================================================================
+
+   1. y_diff                         score=158
+   2. time_gap                       score=155
+   3. projection_error_x_max         score=152
+   4. length_diff                    score=145
+   5. width_diff                     score=144
+   6. projection_error_y_max         score=143
+   7. bhattacharyya_coeff            score=138
+   8. projection_error_x_mean        score=134
+   9. curvature_diff                 score=132
+  10. projection_error_x_std         score=124
+  11. y_std_a                        score=123
+  12. vel_ratio                      score=122
+  13. length_a                       score=121
+  14. duration_a                     score=118
+  15. curvature_b_mean               score=111
+  16. spatial_gap                    score=111
+  17. height_a                       score=104
+  18. curvature_a_mean               score=99
+  19. bhattacharyya_distance         score=94
+  20. velocity_mismatch_y            score=92
+
+================================================================================
+HIGH MULTICOLLINEARITY FEATURES (VIF > 10)
+================================================================================
+
+  - y_mean_a: VIF=1481.40
+  - y_mean_b: VIF=1446.70
+  - projection_error_y_mean: VIF=198.52
+  - projection_error_y_max: VIF=49.24
+  - velocity_fit_x: VIF=48.74
+  - y_diff: VIF=48.59
+  - velocity_actual_x_mean: VIF=47.43
+  - vel_a_mean: VIF=28.03
+  - vel_b_mean: VIF=24.28
+  - curvature_diff: VIF=17.89
+  - curvature_b_mean: VIF=15.25
+  - curvature_a_mean: VIF=10.35

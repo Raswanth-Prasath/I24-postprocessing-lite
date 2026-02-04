@@ -13,8 +13,9 @@ module purge
 module load python/3.10
 module load cuda/11.8
 
-# Activate conda environment if needed
-# source activate your_env
+# Activate conda environment
+source ~/.bashrc
+conda activate i24
 
 # Navigate to script directory
 cd /home/raswanth/I24/I24-postprocessing-lite/Siamese-Network

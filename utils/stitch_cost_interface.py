@@ -285,7 +285,8 @@ class LogisticRegressionCostFunction(StitchCostFunction):
         # Extract components
         self.model = model_pkg.get("model")
         self.scaler = model_pkg.get("scaler")
-        self.selected_features = model_pkg.get("features", [])
+        # Support both 'features' and 'feature_names' keys for compatibility
+        self.selected_features = model_pkg.get("features") or model_pkg.get("feature_names", [])
 
         if self.model is None:
             raise ValueError("Model package missing 'model' key")
@@ -404,7 +405,8 @@ class TorchLogisticCostFunction(StitchCostFunction):
                 model_pkg = pickle.load(f)
             lr = model_pkg["model"]
             scaler = model_pkg["scaler"]
-            features = model_pkg.get("features", [])
+            # Support both 'features' and 'feature_names' keys for compatibility
+            features = model_pkg.get("features") or model_pkg.get("feature_names", [])
 
             state = {
                 "weight": lr.coef_.astype("float32"),

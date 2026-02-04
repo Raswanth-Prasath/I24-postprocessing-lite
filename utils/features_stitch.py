@@ -132,7 +132,14 @@ class StitchFeatureExtractor:
         features_dict = self._extract_basic_features(frag_a, frag_b)
 
         # Add advanced features if needed
-        if self.mode == "advanced":
+        # For "selected" mode, check if any selected features are advanced
+        needs_advanced = self.mode == "advanced"
+        if self.mode == "selected" and self.selected_features:
+            advanced_only = set(self.advanced_features) - set(self.basic_features)
+            if any(f in advanced_only for f in self.selected_features):
+                needs_advanced = True
+
+        if needs_advanced:
             advanced_dict = self._extract_advanced_features(frag_a, frag_b)
             features_dict.update(advanced_dict)
 
