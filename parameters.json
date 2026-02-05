@@ -6,9 +6,9 @@
     "transformed_database": "transformed_beta",
     "meta_database": "meta",
     "transform_postproc": 0,
-    "gt_collection": "GT_ii",
-    "raw_collection": "RAW_ii",
-    "reconciled_collection": "REC_ii",
+    "gt_collection": "GT_iii",
+    "raw_collection": "RAW_iii",
+    "reconciled_collection": "REC_iii",
     "temp_collection": "",
     "compute_node_list": [
         1
@@ -34,17 +34,16 @@
         "mx": 0.1,
         "cy": 2,
         "my": 0.1,
-        "stitch_thresh": 3,
-        "master_stitch_thresh": 4,
+        "stitch_thresh": 0.8,
+        "master_stitch_thresh": 1.0,
         "residual_threshold_x": 5,
         "residual_threshold_y": 1,
         "conf_threshold": 0.1
     },
     "cost_function": {
-        "type": "logistic_regression",
-        "model_path": "Logistic Regression/model_artifacts/consensus_9features_full47.pkl",
-        "scale_factor": 5.0,
-        "time_penalty": 0.1
+        "type": "siamese",
+        "checkpoint_path": "Siamese-Network/outputs/final_model.pth",
+        "device": "cuda"
     },
     "merge_thresh": 0,
     "conf_threshold": 0.2,
@@ -66,7 +65,5 @@
     "jx_lim": 3,
     "jy_lim": 1,
     "ph": 5,
-    "ih": 1,
-    "stitch_thresh": 0.7,
-    "master_stitch_thresh": 0.8999999999999999
+    "ih": 1
 }

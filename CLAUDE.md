@@ -520,6 +520,15 @@ python diagnose_json.py REC_i.json          # Diagnose only
 python diagnose_json.py REC_i.json --fix    # Auto-fix common issues
 ```
 
+### Run All Scenarios (Batch Commands)
+```bash
+# Run full pipeline on all three scenarios
+for s in i ii iii; do echo "=== Scenario $s ==="; python pp_lite.py "$s"; done
+
+# Evaluate MOT metrics on all three scenarios
+for s in i ii iii; do echo "=== MOT $s ==="; python mot_i24.py "$s"; done
+```
+
 ---
 
 ## Part 7: Feature Engineering for Enhanced LR

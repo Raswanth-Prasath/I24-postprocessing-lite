@@ -163,6 +163,193 @@ def compute_iou_matrix(gt_bboxes, t_bboxes, max_iou=0.3):
     return dist
 
 
+def compute_hota_metrics(gt_frames, tracker_frames, iou_thresholds=None):
+    """
+    Compute HOTA (Higher Order Tracking Accuracy) metrics.
+
+    HOTA = sqrt(DetA × AssA), averaged over IoU thresholds.
+
+    Args:
+        gt_frames: dict {frame_num: [(id, bbox), ...]} for ground truth
+        tracker_frames: dict {frame_num: [(id, bbox), ...]} for tracker
+        iou_thresholds: list of IoU thresholds (default: 0.05 to 0.95 step 0.05)
+
+    Returns:
+        dict with HOTA, DetA, AssA, LocA (all averaged over thresholds)
+    """
+    if iou_thresholds is None:
+        iou_thresholds = np.arange(0.05, 1.0, 0.05)
+
+    all_frames = sorted(set(gt_frames.keys()) | set(tracker_frames.keys()))
+    if not all_frames:
+        return {'hota': 0.0, 'deta': 0.0, 'assa': 0.0, 'loca': 0.0}
+
+    # Results per threshold
+    hota_per_thresh = []
+    deta_per_thresh = []
+    assa_per_thresh = []
+    loca_per_thresh = []
+
+    for iou_thresh in iou_thresholds:
+        # Accumulators for this threshold
+        total_tp = 0
+        total_fp = 0
+        total_fn = 0
+        total_iou = 0.0
+
+        # Track associations: gt_id -> tracker_id mappings across frames
+        # For AssA, we need to track which GT is matched to which tracker over time
+        gt_to_tracker_matches = defaultdict(list)  # gt_id -> [(frame, tracker_id), ...]
+        tracker_to_gt_matches = defaultdict(list)  # tracker_id -> [(frame, gt_id), ...]
+
+        for frame in all_frames:
+            gt_dets = gt_frames.get(frame, [])
+            t_dets = tracker_frames.get(frame, [])
+
+            if not gt_dets and not t_dets:
+                continue
+
+            gt_ids = [d[0] for d in gt_dets]
+            gt_bboxes = [bbox_center_to_corner(d[1]) for d in gt_dets]
+
+            t_ids = [d[0] for d in t_dets]
+            t_bboxes = [bbox_center_to_corner(d[1]) for d in t_dets]
+
+            n_gt = len(gt_ids)
+            n_t = len(t_ids)
+
+            if n_gt == 0:
+                total_fp += n_t
+                continue
+            if n_t == 0:
+                total_fn += n_gt
+                continue
+
+            # Compute IoU matrix
+            gt_bboxes_arr = np.array(gt_bboxes)
+            t_bboxes_arr = np.array(t_bboxes)
+
+            # Compute IoU (not distance)
+            gt_x1 = gt_bboxes_arr[:, 0]
+            gt_y1 = gt_bboxes_arr[:, 1]
+            gt_x2 = gt_bboxes_arr[:, 0] + gt_bboxes_arr[:, 2]
+            gt_y2 = gt_bboxes_arr[:, 1] + gt_bboxes_arr[:, 3]
+
+            t_x1 = t_bboxes_arr[:, 0]
+            t_y1 = t_bboxes_arr[:, 1]
+            t_x2 = t_bboxes_arr[:, 0] + t_bboxes_arr[:, 2]
+            t_y2 = t_bboxes_arr[:, 1] + t_bboxes_arr[:, 3]
+
+            inter_x1 = np.maximum(gt_x1[:, None], t_x1[None, :])
+            inter_y1 = np.maximum(gt_y1[:, None], t_y1[None, :])
+            inter_x2 = np.minimum(gt_x2[:, None], t_x2[None, :])
+            inter_y2 = np.minimum(gt_y2[:, None], t_y2[None, :])
+
+            inter_w = np.maximum(0, inter_x2 - inter_x1)
+            inter_h = np.maximum(0, inter_y2 - inter_y1)
+            inter_area = inter_w * inter_h
+
+            gt_area = gt_bboxes_arr[:, 2] * gt_bboxes_arr[:, 3]
+            t_area = t_bboxes_arr[:, 2] * t_bboxes_arr[:, 3]
+            union_area = gt_area[:, None] + t_area[None, :] - inter_area
+
+            iou_matrix = inter_area / np.maximum(union_area, 1e-10)
+
+            # Hungarian matching: greedy assignment based on IoU
+            matched_gt = set()
+            matched_t = set()
+            matches = []  # (gt_idx, t_idx, iou)
+
+            # Sort all pairs by IoU descending
+            pairs = []
+            for gi in range(n_gt):
+                for ti in range(n_t):
+                    if iou_matrix[gi, ti] >= iou_thresh:
+                        pairs.append((iou_matrix[gi, ti], gi, ti))
+            pairs.sort(reverse=True)
+
+            for iou_val, gi, ti in pairs:
+                if gi not in matched_gt and ti not in matched_t:
+                    matches.append((gi, ti, iou_val))
+                    matched_gt.add(gi)
+                    matched_t.add(ti)
+
+            # Count TP, FP, FN
+            tp = len(matches)
+            fp = n_t - tp
+            fn = n_gt - tp
+
+            total_tp += tp
+            total_fp += fp
+            total_fn += fn
+
+            # Sum IoU for LocA
+            for gi, ti, iou_val in matches:
+                total_iou += iou_val
+                gt_id = gt_ids[gi]
+                t_id = t_ids[ti]
+                gt_to_tracker_matches[gt_id].append((frame, t_id))
+                tracker_to_gt_matches[t_id].append((frame, gt_id))
+
+        # Compute DetA
+        if total_tp + total_fp + total_fn > 0:
+            deta = total_tp / (total_tp + total_fp + total_fn)
+        else:
+            deta = 0.0
+
+        # Compute LocA
+        if total_tp > 0:
+            loca = total_iou / total_tp
+        else:
+            loca = 0.0
+
+        # Compute AssA (association accuracy)
+        # For each TP match, compute A(c) = |TPA(c)| / (|TPA(c)| + |FPA(c)| + |FNA(c)|)
+        if total_tp > 0:
+            assa_sum = 0.0
+            # We need to count association quality for each matched pair
+            # TPA: frames where this gt-tracker pair is matched
+            # FPA: frames where tracker is matched to different gt
+            # FNA: frames where gt is matched to different tracker
+
+            for gt_id, matches_list in gt_to_tracker_matches.items():
+                for frame, t_id in matches_list:
+                    # TPA: count matches for this specific (gt_id, t_id) pair
+                    tpa = sum(1 for f, tid in gt_to_tracker_matches[gt_id] if tid == t_id)
+
+                    # FPA: frames where t_id is matched to a different gt
+                    fpa = sum(1 for f, gid in tracker_to_gt_matches[t_id] if gid != gt_id)
+
+                    # FNA: frames where gt_id is matched to a different tracker
+                    fna = sum(1 for f, tid in gt_to_tracker_matches[gt_id] if tid != t_id)
+
+                    if tpa + fpa + fna > 0:
+                        a_c = tpa / (tpa + fpa + fna)
+                    else:
+                        a_c = 0.0
+                    assa_sum += a_c
+
+            assa = assa_sum / total_tp
+        else:
+            assa = 0.0
+
+        # Compute HOTA
+        hota = np.sqrt(deta * assa) if deta > 0 and assa > 0 else 0.0
+
+        hota_per_thresh.append(hota)
+        deta_per_thresh.append(deta)
+        assa_per_thresh.append(assa)
+        loca_per_thresh.append(loca)
+
+    # Average over all thresholds
+    return {
+        'hota': np.mean(hota_per_thresh),
+        'deta': np.mean(deta_per_thresh),
+        'assa': np.mean(assa_per_thresh),
+        'loca': np.mean(loca_per_thresh)
+    }
+
+
 def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
     """Compute MOT metrics comparing tracker output to ground truth."""
 
@@ -214,6 +401,9 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
         # Update accumulator
         acc.update(gt_ids, t_ids, C)
 
+    # Compute HOTA metrics
+    hota_metrics = compute_hota_metrics(gt_frames, tracker_frames)
+
     # Compute object-level FM and IDsw
     events = acc.events
     obj_switches = set()
@@ -243,6 +433,12 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
     # Transform MOTP (1 - distance = IOU)
     summary['motp'] = (1 - summary['motp'])
 
+    # Add HOTA metrics
+    summary['hota'] = hota_metrics['hota']
+    summary['deta'] = hota_metrics['deta']
+    summary['assa'] = hota_metrics['assa']
+    summary['loca'] = hota_metrics['loca']
+
     # Tracker trajectory count
     tracker_traj_count = len(tracker_trajs)
     summary['no_trajs'] = tracker_traj_count
@@ -258,6 +454,10 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
         formatters={
             'mota': '{:.3f}'.format,
             'motp': '{:.3f}'.format,
+            'hota': '{:.3f}'.format,
+            'deta': '{:.3f}'.format,
+            'assa': '{:.3f}'.format,
+            'loca': '{:.3f}'.format,
             'recall': '{:.2f}'.format,
             'precision': '{:.2f}'.format,
             'no_trajs': '{:.0f}'.format,
@@ -278,6 +478,10 @@ def compute_mot_metrics(gt_file, tracker_file, name, iou_threshold=0.3):
             'obj_fragments': 'Obj FM',
             'mota': 'MOTA',
             'motp': 'MOTP',
+            'hota': 'HOTA',
+            'deta': 'DetA',
+            'assa': 'AssA',
+            'loca': 'LocA',
             'no_trajs': 'No. trajs',
             'fgmt_per_gt': 'Fgmt/GT',
             'sw_per_gt': 'Sw/GT'

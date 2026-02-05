@@ -17,3 +17,7 @@ conda install -c conda-forge pyscipopt=3.5.0 # integer programming solver
 
 pip install statsmodels
 pip install ijson
+pip install trackeval
+
+# Pinned dependencies for i24 env
+pip install -r requirements.txt

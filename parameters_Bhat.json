@@ -63,7 +63,5 @@
     "jx_lim": 3,
     "jy_lim": 1,
     "ph": 5,
-    "ih": 1,
-    "stitch_thresh": 0.7,
-    "master_stitch_thresh": 0.8999999999999999
+    "ih": 1
 }

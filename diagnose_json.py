@@ -66,9 +66,25 @@ def diagnose_json(filepath, fix=False):
                 content = content[:match.start() + 2]  # Keep up to }]
                 print(f"  Fixed: Kept only first JSON array (truncated at position {match.start() + 2})")
 
+    def write_fixed_file():
+        """Persist fixed content and keep one backup copy."""
+        backup_path = filepath + '.bak'
+        os.rename(filepath, backup_path)
+        with open(filepath, 'w') as f:
+            f.write(content)
+        print(f"\nFixed file saved. Original backed up to: {backup_path}")
+
     # Try to parse
     try:
         data = json.loads(content)
+        if fix and issues_found:
+            write_fixed_file()
+
+            # Verify persisted fix from disk
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            print("Verification: Fixed file is valid JSON")
+
         print(f"JSON Valid: Yes")
         print(f"Number of trajectories: {len(data)}")
         return True
@@ -85,12 +101,7 @@ def diagnose_json(filepath, fix=False):
             print(f"\nIssues found: {issues_found}")
 
         if fix and issues_found:
-            # Write fixed content
-            backup_path = filepath + '.bak'
-            os.rename(filepath, backup_path)
-            with open(filepath, 'w') as f:
-                f.write(content)
-            print(f"\nFixed file saved. Original backed up to: {backup_path}")
+            write_fixed_file()
 
             # Verify fix
             try:
