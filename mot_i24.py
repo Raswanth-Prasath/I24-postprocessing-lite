@@ -316,7 +316,7 @@ if __name__ == '__main__':
 
     # Evaluate REC vs GT (if REC exists)
     if os.path.exists(gt_file) and os.path.exists(rec_file):
-        print(f"\n--- REC_{suffix} (Bhattacharyya) vs GT_{suffix} ---")
+        print(f"\n--- REC_{suffix} vs GT_{suffix} ---")
         rec_summary = compute_mot_metrics(gt_file, rec_file, f'REC_{suffix}', IOU_THRESHOLD)
     else:
         print(f"\nSkipping REC: REC_{suffix}.json not found")

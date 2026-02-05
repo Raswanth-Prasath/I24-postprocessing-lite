@@ -6,9 +6,9 @@
     "transformed_database": "transformed_beta",
     "meta_database": "meta",
     "transform_postproc": 0,
-    "gt_collection": "GT_iii",
-    "raw_collection": "RAW_iii",
-    "reconciled_collection": "REC_iii",
+    "gt_collection": "GT_ii",
+    "raw_collection": "RAW_ii",
+    "reconciled_collection": "REC_ii",
     "temp_collection": "",
     "compute_node_list": [
         1
@@ -41,7 +41,10 @@
         "conf_threshold": 0.1
     },
     "cost_function": {
-        "type": "bhattacharyya"
+        "type": "logistic_regression",
+        "model_path": "Logistic Regression/model_artifacts/consensus_9features_full47.pkl",
+        "scale_factor": 5.0,
+        "time_penalty": 0.1
     },
     "merge_thresh": 0,
     "conf_threshold": 0.2,

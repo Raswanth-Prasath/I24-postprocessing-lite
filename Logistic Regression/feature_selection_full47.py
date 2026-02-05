@@ -331,7 +331,7 @@ def find_optimal_features(X, y, feature_names, perm_df, coef_df, rfe_df, l1_df):
     rfe_ranked = rfe_df.sort_values('ranking')['feature'].tolist()
 
     # Test different subset sizes
-    subset_sizes = [5, 7, 10, 12, 15, 18, 20, 25, 30, 35, 40, 47]
+    subset_sizes = list(range(1, 48))
 
     results = []
 
@@ -347,6 +347,7 @@ def find_optimal_features(X, y, feature_names, perm_df, coef_df, rfe_df, l1_df):
         results.append(result)
 
         # RFE-based subset (using ranking)
+        
         rfe_subset = rfe_ranked[:n]
         result = evaluate_feature_subset(X, y, feature_names, rfe_subset, f"Top {n} (RFE)")
         results.append(result)
@@ -620,12 +621,17 @@ def main():
     # 9. Train optimal model
     artifacts = train_optimal_model(X, y, feature_names, optimal_features, f"optimal_{optimal_n}features_full47")
 
-    # Also train models with consensus top-10 and top-15
+    # Also train models with consensus top-9/10/11/15
+    consensus_top9 = consensus_df.head(9)['feature'].tolist()
     consensus_top10 = consensus_df.head(10)['feature'].tolist()
+    consensus_top11 = consensus_df.head(11)['feature'].tolist()
     consensus_top15 = consensus_df.head(15)['feature'].tolist()
 
+    train_optimal_model(X, y, feature_names, consensus_top9, "consensus_9features_full47")
     train_optimal_model(X, y, feature_names, consensus_top10, "consensus_10features_full47")
+    train_optimal_model(X, y, feature_names, consensus_top11, "consensus_11features_full47")
     train_optimal_model(X, y, feature_names, consensus_top15, "consensus_15features_full47")
+
 
     # 10. Generate report
     generate_report(results_df, consensus_df, vif_df, optimal_features)

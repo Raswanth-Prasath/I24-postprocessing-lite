@@ -2,29 +2,29 @@
 COMPREHENSIVE FEATURE SELECTION REPORT (47 FEATURES)
 ================================================================================
 
-Generated: 2026-02-03T14:31:19.844844
+Generated: 2026-02-04T22:32:07.018081
 
 ================================================================================
 BEST PERFORMING SUBSETS
 ================================================================================
 
+  Top 26 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
+  Top 28 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
+  Top 29 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
   Top 25 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
+  Top 24 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
+  Top 27 (Permutation)                ROC-AUC: 0.9998  AP: 0.9998
   Top 30 (Permutation)                ROC-AUC: 0.9998  AP: 0.9997
-  Top 30 (RFE)                        ROC-AUC: 0.9997  AP: 0.9997
-  Top 25 (RFE)                        ROC-AUC: 0.9997  AP: 0.9997
-  Top 30 (Coefficient)                ROC-AUC: 0.9997  AP: 0.9997
-  Top 35 (Permutation)                ROC-AUC: 0.9997  AP: 0.9997
-  Top 40 (Permutation)                ROC-AUC: 0.9997  AP: 0.9997
-  Top 20 (RFE)                        ROC-AUC: 0.9997  AP: 0.9996
-  Top 40 (RFE)                        ROC-AUC: 0.9996  AP: 0.9996
-  Top 40 (Coefficient)                ROC-AUC: 0.9996  AP: 0.9996
+  Top 23 (Permutation)                ROC-AUC: 0.9998  AP: 0.9997
+  Top 22 (Permutation)                ROC-AUC: 0.9998  AP: 0.9997
+  Top 26 (RFE)                        ROC-AUC: 0.9998  AP: 0.9997
 
 ================================================================================
 OPTIMAL FEATURE SET
 ================================================================================
 
-Best subset: Top 25 (Permutation)
-Number of features: 25
+Best subset: Top 26 (Permutation)
+Number of features: 26
 Test ROC-AUC: 0.9998
 Test AP: 0.9998
 CV ROC-AUC: 0.9998 ± 0.0002
@@ -55,6 +55,7 @@ Features:
   - height_a
   - length_b
   - bhattacharyya_distance
+  - velocity_fit_x
 
 ================================================================================
 CONSENSUS RANKING (TOP 20)
