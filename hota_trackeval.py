@@ -191,7 +191,7 @@ def evaluate_with_trackeval(gt_file, tracker_file, name):
 
     # Instantiate metrics (suppress CLEAR/Identity config printing)
     hota_metric = HOTA()
-    clear_metric = CLEAR({'PRINT_CONFIG': False})
+    clear_metric = CLEAR({'PRINT_CONFIG': False, 'THRESHOLD': 0.3})
     identity_metric = Identity({'PRINT_CONFIG': False})
 
     # Evaluate
@@ -325,8 +325,15 @@ if __name__ == '__main__':
     else:
         print(f"\nSkipping REC: neither REC_{suffix}_BM.json nor REC_{suffix}.json found")
 
+    # REC (Bhat) vs GT
+    if os.path.exists(gt_file) and os.path.exists(raw_file):
+        print(f"\n--- RAW_{suffix}_Bhat vs GT_{suffix} ---")
+        evaluate_with_trackeval(gt_file, raw_file, f'RAW_{suffix}')
+    else:
+        print(f"\nSkipping REC: neither REC_{suffix}_Bhat.json nor REC_{suffix}.json found")
+
     # REC_LR variants vs GT
-    for feature_count in [9, 10, 11, 15, 25, 26]:
+    for feature_count in [8, 9, 10, 11, 15, 25, 26]:
         rec_lr_file = os.path.join(script_dir, f'REC_{suffix}_LR_{feature_count}.json')
 
         # Backward compatibility for older single-file naming.
@@ -340,7 +347,12 @@ if __name__ == '__main__':
             print(f"\nSkipping REC_LR: REC_{suffix}_LR_{feature_count}.json not found")
 
     
-    
+    # REC (SNN) vs GT
+    if os.path.exists(gt_file) and os.path.exists(raw_file):
+        print(f"\n--- RAW_{suffix}_SNN vs GT_{suffix} ---")
+        evaluate_with_trackeval(gt_file, raw_file, f'RAW_{suffix}')
+    else:
+        print(f"\nSkipping REC: neither REC_{suffix}_SNN.json nor REC_{suffix}.json found")
         
 
     # GT vs GT sanity check

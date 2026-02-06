@@ -622,11 +622,13 @@ def main():
     artifacts = train_optimal_model(X, y, feature_names, optimal_features, f"optimal_{optimal_n}features_full47")
 
     # Also train models with consensus top-9/10/11/15
+    consensus_top8 = consensus_df.head(8)['feature'].tolist()
     consensus_top9 = consensus_df.head(9)['feature'].tolist()
     consensus_top10 = consensus_df.head(10)['feature'].tolist()
     consensus_top11 = consensus_df.head(11)['feature'].tolist()
     consensus_top15 = consensus_df.head(15)['feature'].tolist()
 
+    train_optimal_model(X, y, feature_names, consensus_top8, "consensus_8features_full47")
     train_optimal_model(X, y, feature_names, consensus_top9, "consensus_9features_full47")
     train_optimal_model(X, y, feature_names, consensus_top10, "consensus_10features_full47")
     train_optimal_model(X, y, feature_names, consensus_top11, "consensus_11features_full47")
