@@ -1,0 +1,1994 @@
+========================================================================
+OPTUNA LR SEARCH JOB STARTED
+========================================================================
+Job ID: 46782533
+Node: sg035
+Start Time: Sun Feb  8 01:32:14 MST 2026
+========================================================================
+Python version:
+Python 3.10.0
+
+Starting Optuna Bayesian search...
+======================================================================
+OPTUNA BAYESIAN OPTIMIZATION FOR LR PIPELINE
+======================================================================
+  Scenarios:          ['i', 'ii', 'iii']
+  Model trials:       20
+  Pipeline trials:    80
+  Top models (Ph2):   5
+  Study name:         lr_optuna
+  Output CSV:         /home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/feature_selection_outputs/optuna_search_results.csv
+  Optuna DB:          /home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/feature_selection_outputs/optuna_study.db
+======================================================================
+
+======================================================================
+PHASE 1: BAYESIAN MODEL SEARCH
+======================================================================
+  Loaded 38 cached models from disk
+  Dataset: 2100 samples, 10 features
+  Positive: 1050 (50.0%)
+  20 model trials already completed, skipping Phase 1
+
+  Top 5 models for Phase 2:
+    1. C=0.4586  elasticnet  cv_ROC=0.9994  path=Logistic Regression/model_artifacts/grid_search/lr_C0.4586468829885414_elasticnet_saga.pkl
+    2. C=0.4934  elasticnet  cv_ROC=0.9994  path=Logistic Regression/model_artifacts/grid_search/lr_C0.49339210970760394_elasticnet_saga.pkl
+    3. C=0.5000  elasticnet  cv_ROC=0.9994  path=Logistic Regression/model_artifacts/grid_search/lr_C0.5_elasticnet_saga.pkl
+    4. C=0.3537  elasticnet  cv_ROC=0.9994  path=Logistic Regression/model_artifacts/grid_search/lr_C0.35369499096457285_elasticnet_saga.pkl
+    5. C=0.5000          l2  cv_ROC=0.9994  path=Logistic Regression/model_artifacts/grid_search/lr_C0.5_l2_lbfgs.pkl
+
+======================================================================
+PHASE 2: BAYESIAN PIPELINE TUNING
+======================================================================
+  Evaluating on scenarios: ['i', 'ii', 'iii']
+  ~240 pipeline runs total
+  Running 66 new pipeline trials (14 already done)
+
+  [Trial 1] C=0.4934 elasticnet, scale=9.83, stitch=0.759, time_pen=0.165, master_off=0.384
+Loaded 313 GT trajectories, 751 tracker trajectories
+
+==================================================
+  Results for Optuna_T1_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.608
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   413
+  FP                   13025
+  FN                   34060
+  Frag                   483
+  No. trajs              751
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 2] C=0.5000 l2, scale=10.13, stitch=0.901, time_pen=0.302, master_off=0.433
+Loaded 313 GT trajectories, 751 tracker trajectories
+
+==================================================
+  Results for Optuna_T2_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.608
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   413
+  FP                   13025
+  FN                   34060
+  Frag                   483
+  No. trajs              751
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 3] C=0.5000 l2, scale=8.16, stitch=0.566, time_pen=0.213, master_off=0.441
+Loaded 313 GT trajectories, 751 tracker trajectories
+
+==================================================
+  Results for Optuna_T3_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.608
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   413
+  FP                   13025
+  FN                   34060
+  Frag                   483
+  No. trajs              751
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 4] C=0.5000 l2, scale=11.75, stitch=0.416, time_pen=0.262, master_off=0.498
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T4_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 5] C=0.4934 elasticnet, scale=5.03, stitch=0.367, time_pen=0.453, master_off=0.485
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T5_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 6] C=0.4934 elasticnet, scale=6.86, stitch=0.393, time_pen=0.197, master_off=0.473
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T6_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 7] C=0.4586 elasticnet, scale=8.17, stitch=0.692, time_pen=0.201, master_off=0.474
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T7_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 8] C=0.5000 l2, scale=8.02, stitch=0.324, time_pen=0.357, master_off=0.392
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T8_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 9] C=0.3537 elasticnet, scale=6.74, stitch=1.248, time_pen=0.263, master_off=0.415
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T9_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 10] C=0.4934 elasticnet, scale=11.84, stitch=0.431, time_pen=0.121, master_off=0.430
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T10_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 11] C=0.5000 l2, scale=10.78, stitch=0.809, time_pen=0.094, master_off=0.439
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T11_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 12] C=0.4934 elasticnet, scale=7.97, stitch=0.621, time_pen=0.202, master_off=0.227
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T12_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 13] C=0.4934 elasticnet, scale=8.76, stitch=0.357, time_pen=0.096, master_off=0.292
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T13_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 14] C=0.4934 elasticnet, scale=7.66, stitch=0.307, time_pen=0.226, master_off=0.315
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T14_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 15] C=0.3537 elasticnet, scale=5.84, stitch=0.500, time_pen=0.123, master_off=0.497
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T15_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 16] C=0.3537 elasticnet, scale=7.81, stitch=0.321, time_pen=0.114, master_off=0.330
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T16_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 17] C=0.4934 elasticnet, scale=11.33, stitch=0.570, time_pen=0.258, master_off=0.294
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T17_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 18] C=0.4934 elasticnet, scale=7.20, stitch=0.319, time_pen=0.350, master_off=0.490
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T18_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 19] C=0.5000 l2, scale=6.81, stitch=0.305, time_pen=0.045, master_off=0.426
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T19_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 20] C=0.4586 elasticnet, scale=9.76, stitch=0.396, time_pen=0.160, master_off=0.395
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T20_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 21] C=0.5000 elasticnet, scale=8.61, stitch=0.730, time_pen=0.366, master_off=0.474
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T21_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 22] C=0.5000 elasticnet, scale=10.26, stitch=0.453, time_pen=0.018, master_off=0.384
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T22_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 23] C=0.5000 elasticnet, scale=8.26, stitch=0.941, time_pen=0.049, master_off=0.454
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T23_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 24] C=0.5000 elasticnet, scale=8.58, stitch=0.636, time_pen=0.178, master_off=0.372
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T24_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 25] C=0.5000 elasticnet, scale=7.09, stitch=0.431, time_pen=0.077, master_off=0.362
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T25_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 26] C=0.5000 elasticnet, scale=9.43, stitch=1.432, time_pen=0.094, master_off=0.238
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T26_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 27] C=0.3537 elasticnet, scale=5.68, stitch=1.081, time_pen=0.047, master_off=0.144
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T27_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 28] C=0.5000 elasticnet, scale=8.80, stitch=0.532, time_pen=0.107, master_off=0.490
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T28_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 29] C=0.4586 elasticnet, scale=8.58, stitch=0.301, time_pen=0.187, master_off=0.196
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T29_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 30] C=0.5000 l2, scale=5.92, stitch=0.989, time_pen=0.469, master_off=0.235
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T30_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 31] C=0.4934 elasticnet, scale=4.12, stitch=0.384, time_pen=0.278, master_off=0.423
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T31_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 32] C=0.3537 elasticnet, scale=4.22, stitch=0.617, time_pen=0.290, master_off=0.182
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T32_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 33] C=0.3537 elasticnet, scale=5.76, stitch=0.528, time_pen=0.339, master_off=0.436
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T33_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 34] C=0.5000 l2, scale=5.02, stitch=0.388, time_pen=0.349, master_off=0.491
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T34_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 35] C=0.3537 elasticnet, scale=9.56, stitch=0.379, time_pen=0.341, master_off=0.491
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T35_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 36] C=0.3537 elasticnet, scale=6.35, stitch=0.705, time_pen=0.306, master_off=0.303
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T36_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 37] C=0.4586 elasticnet, scale=6.28, stitch=0.374, time_pen=0.284, master_off=0.477
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T37_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 38] C=0.5000 l2, scale=2.55, stitch=1.301, time_pen=0.132, master_off=0.442
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T38_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 39] C=0.4934 elasticnet, scale=7.09, stitch=0.580, time_pen=0.108, master_off=0.416
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T39_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 40] C=0.5000 l2, scale=9.52, stitch=0.582, time_pen=0.259, master_off=0.486
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T40_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 41] C=0.5000 l2, scale=3.52, stitch=0.834, time_pen=0.232, master_off=0.331
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T41_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 42] C=0.5000 elasticnet, scale=4.76, stitch=0.341, time_pen=0.295, master_off=0.487
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T42_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 43] C=0.4934 elasticnet, scale=3.71, stitch=0.448, time_pen=0.055, master_off=0.241
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T43_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 44] C=0.5000 elasticnet, scale=6.43, stitch=0.393, time_pen=0.251, master_off=0.467
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T44_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 45] C=0.5000 l2, scale=11.44, stitch=1.300, time_pen=0.356, master_off=0.185
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T45_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 46] C=0.4934 elasticnet, scale=10.33, stitch=0.328, time_pen=0.214, master_off=0.409
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T46_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 47] C=0.3537 elasticnet, scale=6.92, stitch=0.321, time_pen=0.351, master_off=0.345
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T47_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 48] C=0.5000 elasticnet, scale=4.94, stitch=0.360, time_pen=0.111, master_off=0.493
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T48_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 49] C=0.5000 elasticnet, scale=11.23, stitch=0.323, time_pen=0.249, master_off=0.436
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T49_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 50] C=0.5000 l2, scale=10.39, stitch=0.344, time_pen=0.175, master_off=0.310
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T50_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 51] C=0.3537 elasticnet, scale=11.88, stitch=0.805, time_pen=0.157, master_off=0.484
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T51_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 52] C=0.4586 elasticnet, scale=8.60, stitch=1.020, time_pen=0.017, master_off=0.190
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T52_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 53] C=0.4586 elasticnet, scale=10.65, stitch=0.700, time_pen=0.036, master_off=0.214
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T53_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 54] C=0.5000 l2, scale=8.55, stitch=0.693, time_pen=0.049, master_off=0.279
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T54_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 55] C=0.4586 elasticnet, scale=4.05, stitch=1.358, time_pen=0.396, master_off=0.283
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T55_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 56] C=0.4586 elasticnet, scale=8.29, stitch=0.578, time_pen=0.014, master_off=0.176
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T56_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 57] C=0.3537 elasticnet, scale=5.95, stitch=0.362, time_pen=0.243, master_off=0.393
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T57_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 58] C=0.4934 elasticnet, scale=7.14, stitch=0.584, time_pen=0.242, master_off=0.420
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T58_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 59] C=0.4934 elasticnet, scale=9.38, stitch=0.601, time_pen=0.063, master_off=0.386
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T59_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 60] C=0.3537 elasticnet, scale=2.75, stitch=1.080, time_pen=0.422, master_off=0.139
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T60_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 61] C=0.4934 elasticnet, scale=6.87, stitch=0.363, time_pen=0.092, master_off=0.202
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T61_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 62] C=0.3537 elasticnet, scale=10.68, stitch=0.537, time_pen=0.075, master_off=0.228
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T62_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 63] C=0.4934 elasticnet, scale=3.70, stitch=0.471, time_pen=0.195, master_off=0.491
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T63_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 64] C=0.4586 elasticnet, scale=9.79, stitch=0.808, time_pen=0.021, master_off=0.314
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T64_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 65] C=0.4934 elasticnet, scale=6.13, stitch=0.361, time_pen=0.043, master_off=0.460
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T65_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+  [Trial 66] C=0.4934 elasticnet, scale=2.39, stitch=0.404, time_pen=0.080, master_off=0.447
+Loaded 313 GT trajectories, 752 tracker trajectories
+
+==================================================
+  Results for Optuna_T66_i
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.309
+  DetA                 0.335
+  AssA                 0.297
+  LocA                 0.671
+  MOTA                 0.607
+  MOTP                 0.529
+  IDF1                 0.318
+  IDR                  0.290
+  IDP                  0.351
+  Precision            0.870
+  Recall               0.719
+  IDsw                   414
+  FP                   13039
+  FN                   34058
+  Frag                   483
+  No. trajs              752
+  Fgmt/GT               2.40
+  Sw/GT                 1.32
+==================================================
+
+
+Restored original parameters.json.
+
+======================================================================
+OPTUNA SEARCH SUMMARY
+======================================================================
+  Total trials:     97
+  Completed:        15
+  Pruned:           81
+  Failed:           1
+  Scenarios:        i, ii, iii
+
+  Best composite score: 0.4176
+  Best params:
+    model_path: Logistic Regression/model_artifacts/grid_search/lr_C0.49339210970760394_elasticnet_saga.pkl
+    scale_factor: 5.9642
+    stitch_thresh: 0.3143
+    time_penalty: 0.3129
+    master_offset: 0.4621
+  Per-scenario scores:
+    ii: 0.4176
+
+  Top 5 trial configurations:
+  Rank  Trial   C        Penalty      Scale   Stitch   TimePen     Score
+  ----------------------------------------------------------------------
+  1     6       0.5      elasticnet   9.41    0.445    0.044      0.4171
+  2     7       0.35369499096457285 elasticnet   6.40    0.427    0.294      0.4171
+  3     8       0.5      elasticnet   5.86    0.349    0.235      0.4171
+  4     9       0.4586468829885414 elasticnet   10.40   0.605    0.033      0.4171
+  5     10      0.49339210970760394 elasticnet   4.27    0.354    0.140      0.4171
+
+  Full results: /home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/feature_selection_outputs/optuna_search_results.csv
+  Optuna DB:    /home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/feature_selection_outputs/optuna_study.db
+======================================================================
+
+End Time: Sun Feb  8 03:47:57 MST 2026

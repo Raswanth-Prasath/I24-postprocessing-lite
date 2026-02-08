@@ -56,7 +56,8 @@ class SiameseCostFunction(StitchCostFunction):
     Uses trained neural network to compute similarity between fragment pairs.
     """
 
-    def __init__(self, checkpoint_path: str, device: str = None, model_config: dict = None):
+    def __init__(self, checkpoint_path: str, device: str = None, model_config: dict = None,
+                 scale_factor: float = 5.0, time_penalty: float = 0.1):
         """
         Initialize Siamese cost function.
 
@@ -64,12 +65,16 @@ class SiameseCostFunction(StitchCostFunction):
             checkpoint_path: Path to trained model checkpoint (.pth file)
             device: Device for inference ('cuda', 'cpu', or None for auto)
             model_config: Model architecture configuration (optional)
+            scale_factor: Scale factor to adjust cost range (default 5.0)
+            time_penalty: Weight for time gap penalty (default 0.1)
         """
         import torch
         import numpy as np
 
         self.np = np
         self.torch = torch
+        self.scale_factor = scale_factor
+        self.time_penalty = time_penalty
 
         # Determine device
         if device is None:
@@ -222,13 +227,13 @@ class SiameseCostFunction(StitchCostFunction):
                 similarity, _, _ = self.model(seq_a_t, len_a, seq_b_t, len_b, endpoint_t)
                 similarity = similarity.item()
 
-            # Convert similarity to cost
+            # Convert similarity to cost (scaled to match Bhattacharyya range)
             # similarity in [0, 1], higher = better match
             # cost should be lower for better matches
-            base_cost = 1.0 - similarity
+            base_cost = (1.0 - similarity) * self.scale_factor
 
-            # Add time penalty (same as original Bhattacharyya)
-            time_cost = 0.1 * gap
+            # Add time penalty
+            time_cost = self.time_penalty * gap
 
             total_cost = base_cost + time_cost
 
@@ -488,6 +493,274 @@ class TorchLogisticCostFunction(StitchCostFunction):
             return 1e6
 
 
+class MLPCostFunction(StitchCostFunction):
+    """
+    MLP-based cost function using raw summary features.
+    """
+
+    def __init__(self, checkpoint_path: str, device: str = 'cpu',
+                 scale_factor: float = 5.0, time_penalty: float = 0.1):
+        import torch
+        import numpy as np
+
+        self.torch = torch
+        self.np = np
+        self.device = torch.device(device)
+        self.scale_factor = scale_factor
+        self.time_penalty = time_penalty
+
+        # Add models directory to path
+        models_dir = Path(__file__).parent.parent / "models"
+        if str(models_dir) not in sys.path:
+            sys.path.insert(0, str(models_dir))
+
+        from mlp_model import MLPStitchModel, extract_pair_features, TOTAL_INPUT_DIM
+        self._extract_pair_features = extract_pair_features
+
+        # Load checkpoint
+        checkpoint_path = self._resolve_path(checkpoint_path)
+        ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+        input_dim = ckpt.get('input_dim', TOTAL_INPUT_DIM)
+
+        self.model = MLPStitchModel(input_dim=input_dim)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model = self.model.to(self.device)
+        self.model.eval()
+
+        # Normalization stats
+        self.feat_mean = torch.as_tensor(ckpt.get('feat_mean', np.zeros(input_dim)),
+                                          device=self.device, dtype=torch.float32)
+        self.feat_std = torch.as_tensor(ckpt.get('feat_std', np.ones(input_dim)),
+                                         device=self.device, dtype=torch.float32)
+
+        print(f"[MLPCostFunction] Loaded model from {checkpoint_path}")
+        print(f"[MLPCostFunction] Scale factor: {scale_factor}, Time penalty: {time_penalty}")
+
+    def _resolve_path(self, path: str) -> str:
+        if path is None:
+            return None
+        if Path(path).is_absolute():
+            return path
+        project_root = Path(__file__).parent.parent
+        resolved = project_root / path
+        if resolved.exists():
+            return str(resolved)
+        return path
+
+    def compute_cost(self, track1: dict, track2: dict,
+                    TIME_WIN: float, param: dict) -> float:
+        np = self.np
+        torch = self.torch
+
+        try:
+            if "first_timestamp" in track2 and "last_timestamp" in track1:
+                gap = track2["first_timestamp"] - track1["last_timestamp"]
+            else:
+                gap = track2["timestamp"][0] - track1["timestamp"][-1]
+
+            if gap < 0 or gap > TIME_WIN:
+                return 1e6
+
+            features = self._extract_pair_features(track1, track2)
+            features = np.nan_to_num(features, nan=0.0, posinf=1e6, neginf=-1e6)
+            feat_t = torch.as_tensor(features, device=self.device, dtype=torch.float32).unsqueeze(0)
+
+            # Normalize
+            feat_t = (feat_t - self.feat_mean) / (self.feat_std + 1e-8)
+
+            with torch.no_grad():
+                prob = self.model(feat_t).item()
+
+            base_cost = (1.0 - prob) * self.scale_factor
+            time_cost = self.time_penalty * gap
+            return float(base_cost + time_cost)
+
+        except Exception as e:
+            print(f"[MLPCostFunction] Error: {e}")
+            return 1e6
+
+
+class TCNCostFunction(StitchCostFunction):
+    """
+    TCN (Temporal Convolutional Network) based cost function.
+    """
+
+    def __init__(self, checkpoint_path: str, device: str = 'cpu',
+                 scale_factor: float = 5.0, time_penalty: float = 0.1):
+        import torch
+        import numpy as np
+
+        self.torch = torch
+        self.np = np
+        self.device = torch.device(device)
+        self.scale_factor = scale_factor
+        self.time_penalty = time_penalty
+
+        models_dir = Path(__file__).parent.parent / "models"
+        if str(models_dir) not in sys.path:
+            sys.path.insert(0, str(models_dir))
+
+        from tcn_model import SiameseTCN
+        from rich_sequence_dataset import extract_rich_sequence, extract_endpoint_features
+        self._extract_sequence = extract_rich_sequence
+        self._extract_endpoint = extract_endpoint_features
+
+        checkpoint_path = self._resolve_path(checkpoint_path)
+        ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+
+        model_config = ckpt.get('model_config', {})
+        self.model = SiameseTCN(**model_config)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model = self.model.to(self.device)
+        self.model.eval()
+
+        # Normalization
+        self.seq_mean = torch.as_tensor(ckpt.get('seq_mean', np.zeros(8)),
+                                         device=self.device, dtype=torch.float32)
+        self.seq_std = torch.as_tensor(ckpt.get('seq_std', np.ones(8)),
+                                        device=self.device, dtype=torch.float32)
+
+        print(f"[TCNCostFunction] Loaded model from {checkpoint_path}")
+
+    def _resolve_path(self, path: str) -> str:
+        if path is None:
+            return None
+        if Path(path).is_absolute():
+            return path
+        project_root = Path(__file__).parent.parent
+        resolved = project_root / path
+        if resolved.exists():
+            return str(resolved)
+        return path
+
+    def compute_cost(self, track1: dict, track2: dict,
+                    TIME_WIN: float, param: dict) -> float:
+        np = self.np
+        torch = self.torch
+
+        try:
+            t1 = np.array(track1['timestamp'])
+            t2 = np.array(track2['timestamp'])
+            gap = t2[0] - t1[-1]
+
+            if gap < 0 or gap > TIME_WIN:
+                return 1e6
+
+            seq_a = self._extract_sequence(track1)
+            seq_b = self._extract_sequence(track2)
+            endpoint = self._extract_endpoint(track1, track2)
+
+            # Normalize
+            seq_a_t = torch.FloatTensor(seq_a).unsqueeze(0).to(self.device)
+            seq_b_t = torch.FloatTensor(seq_b).unsqueeze(0).to(self.device)
+            seq_a_t = (seq_a_t - self.seq_mean) / (self.seq_std + 1e-8)
+            seq_b_t = (seq_b_t - self.seq_mean) / (self.seq_std + 1e-8)
+
+            endpoint_t = torch.FloatTensor(endpoint).unsqueeze(0).to(self.device)
+
+            with torch.no_grad():
+                similarity = self.model(seq_a_t, seq_b_t, endpoint_t).item()
+
+            base_cost = (1.0 - similarity) * self.scale_factor
+            time_cost = self.time_penalty * gap
+            return float(base_cost + time_cost)
+
+        except Exception as e:
+            print(f"[TCNCostFunction] Error: {e}")
+            return 1e6
+
+
+class TransformerCostFunction(StitchCostFunction):
+    """
+    Transformer-based cost function for trajectory stitching.
+    """
+
+    def __init__(self, checkpoint_path: str, device: str = 'cpu',
+                 scale_factor: float = 5.0, time_penalty: float = 0.1):
+        import torch
+        import numpy as np
+
+        self.torch = torch
+        self.np = np
+        self.device = torch.device(device)
+        self.scale_factor = scale_factor
+        self.time_penalty = time_penalty
+
+        models_dir = Path(__file__).parent.parent / "models"
+        if str(models_dir) not in sys.path:
+            sys.path.insert(0, str(models_dir))
+
+        from transformer_model import SiameseTransformerNetwork
+        from rich_sequence_dataset import extract_rich_sequence, extract_endpoint_features
+        self._extract_sequence = extract_rich_sequence
+        self._extract_endpoint = extract_endpoint_features
+
+        checkpoint_path = self._resolve_path(checkpoint_path)
+        ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+
+        model_config = ckpt.get('model_config', {})
+        self.model = SiameseTransformerNetwork(**model_config)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model = self.model.to(self.device)
+        self.model.eval()
+
+        self.seq_mean = torch.as_tensor(ckpt.get('seq_mean', np.zeros(8)),
+                                         device=self.device, dtype=torch.float32)
+        self.seq_std = torch.as_tensor(ckpt.get('seq_std', np.ones(8)),
+                                        device=self.device, dtype=torch.float32)
+
+        print(f"[TransformerCostFunction] Loaded model from {checkpoint_path}")
+
+    def _resolve_path(self, path: str) -> str:
+        if path is None:
+            return None
+        if Path(path).is_absolute():
+            return path
+        project_root = Path(__file__).parent.parent
+        resolved = project_root / path
+        if resolved.exists():
+            return str(resolved)
+        return path
+
+    def compute_cost(self, track1: dict, track2: dict,
+                    TIME_WIN: float, param: dict) -> float:
+        np = self.np
+        torch = self.torch
+
+        try:
+            t1 = np.array(track1['timestamp'])
+            t2 = np.array(track2['timestamp'])
+            gap = t2[0] - t1[-1]
+
+            if gap < 0 or gap > TIME_WIN:
+                return 1e6
+
+            seq_a = self._extract_sequence(track1)
+            seq_b = self._extract_sequence(track2)
+            endpoint = self._extract_endpoint(track1, track2)
+
+            seq_a_t = torch.FloatTensor(seq_a).unsqueeze(0).to(self.device)
+            seq_b_t = torch.FloatTensor(seq_b).unsqueeze(0).to(self.device)
+            seq_a_t = (seq_a_t - self.seq_mean) / (self.seq_std + 1e-8)
+            seq_b_t = (seq_b_t - self.seq_mean) / (self.seq_std + 1e-8)
+
+            # Padding masks (all False = no padding for single sequences)
+            mask_a = torch.zeros(1, seq_a_t.size(1), dtype=torch.bool, device=self.device)
+            mask_b = torch.zeros(1, seq_b_t.size(1), dtype=torch.bool, device=self.device)
+            endpoint_t = torch.FloatTensor(endpoint).unsqueeze(0).to(self.device)
+
+            with torch.no_grad():
+                similarity = self.model(seq_a_t, mask_a, seq_b_t, mask_b, endpoint_t).item()
+
+            base_cost = (1.0 - similarity) * self.scale_factor
+            time_cost = self.time_penalty * gap
+            return float(base_cost + time_cost)
+
+        except Exception as e:
+            print(f"[TransformerCostFunction] Error: {e}")
+            return 1e6
+
+
 class CostFunctionFactory:
     """Factory for creating cost function instances"""
 
@@ -535,11 +808,15 @@ class CostFunctionFactory:
             checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
             device = config.get('device', None)
             model_config = config.get('model_config', None)
+            scale_factor = config.get('scale_factor', 5.0)
+            time_penalty = config.get('time_penalty', 0.1)
 
             return SiameseCostFunction(
                 checkpoint_path=checkpoint_path,
                 device=device,
-                model_config=model_config
+                model_config=model_config,
+                scale_factor=scale_factor,
+                time_penalty=time_penalty
             )
 
         elif cost_type in ('logistic_regression', 'lr'):
@@ -576,9 +853,48 @@ class CostFunctionFactory:
                 save_converted=save_converted,
             )
 
+        elif cost_type == 'mlp':
+            checkpoint_path = config.get('checkpoint_path')
+            if checkpoint_path is None:
+                raise ValueError("checkpoint_path required for mlp cost function")
+            checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
+            return MLPCostFunction(
+                checkpoint_path=checkpoint_path,
+                device=config.get('device', 'cpu'),
+                scale_factor=config.get('scale_factor', 5.0),
+                time_penalty=config.get('time_penalty', 0.1),
+            )
+
+        elif cost_type == 'tcn':
+            checkpoint_path = config.get('checkpoint_path')
+            if checkpoint_path is None:
+                raise ValueError("checkpoint_path required for tcn cost function")
+            checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
+            return TCNCostFunction(
+                checkpoint_path=checkpoint_path,
+                device=config.get('device', 'cpu'),
+                scale_factor=config.get('scale_factor', 5.0),
+                time_penalty=config.get('time_penalty', 0.1),
+            )
+
+        elif cost_type == 'transformer':
+            checkpoint_path = config.get('checkpoint_path')
+            if checkpoint_path is None:
+                raise ValueError("checkpoint_path required for transformer cost function")
+            checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
+            return TransformerCostFunction(
+                checkpoint_path=checkpoint_path,
+                device=config.get('device', 'cpu'),
+                scale_factor=config.get('scale_factor', 5.0),
+                time_penalty=config.get('time_penalty', 0.1),
+            )
+
         else:
-            raise ValueError(f"Unknown cost function type: {cost_type}. "
-                           f"Supported: 'bhattacharyya', 'siamese', 'logistic_regression', 'torch_logistic'")
+            raise ValueError(
+                f"Unknown cost function type: {cost_type}. "
+                f"Supported: 'bhattacharyya', 'siamese', 'logistic_regression', "
+                f"'torch_logistic', 'mlp', 'tcn', 'transformer'"
+            )
 
 
 # Convenience function for backward compatibility

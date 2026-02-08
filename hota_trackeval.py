@@ -333,7 +333,7 @@ if __name__ == '__main__':
         print(f"\nSkipping REC: neither REC_{suffix}_Bhat.json nor REC_{suffix}.json found")
 
     # REC_LR variants vs GT
-    for feature_count in [8, 9, 10, 11, 15, 25, 26]:
+    for feature_count in [6, 7 ,8, 9, 10, 11, 15, 25, 26]:
         rec_lr_file = os.path.join(script_dir, f'REC_{suffix}_LR_{feature_count}.json')
 
         # Backward compatibility for older single-file naming.
