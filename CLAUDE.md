@@ -134,7 +134,7 @@ I24-postprocessing-lite/
 │
 └── Data Files (204 MB total)
     ├── GT_i.json, GT_ii.json, GT_iii.json        # Ground truth
-    ├── RAW_i_Bhat.json, RAW_ii_Bhat.json, RAW_iii_Bhat.json  # Raw fragments (Bhattacharyya baseline)
+    ├── REC_i_Bhat.json, REC_ii_Bhat.json, REC_iii_Bhat.json  # Raw fragments (Bhattacharyya baseline)
     ├── REC_i.json, REC_ii.json, REC_iii.json     # Reconciled (Bhattacharyya cost)
     └── REC_i_LR.json, REC_ii_LR.json, REC_iii_LR.json  # Reconciled (Logistic Regression cost)
 ```

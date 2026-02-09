@@ -1,0 +1,92 @@
+========================================================================
+REBUILD DATASET JOB STARTED
+========================================================================
+Job ID: 46820915
+Node: sg014
+Start Time: Sun Feb  8 17:20:18 MST 2026
+========================================================================
+Python version:
+Python 3.10.0
+
+Starting dataset rebuild...
+======================================================================
+REBUILDING DATASET v3 — GT Masking + Augmentation
+======================================================================
+Mask centers: [225, 625, 1125, 1625]
+Mask width: 250 ± 50 ft
+Neg time window: ±10.0s
+Neg max y_diff: 5.0 ft (also applied to positives)
+Upscale: 3x augmented copies
+Detection noise: {'x_std': 1.5, 'y_std': 0.5, 'length_std': 0.8, 'width_std': 0.15, 'height_std': 0.3, 'velocity_std': 4.0, 'conf_mean': 0.92, 'conf_std': 0.11, 'point_dropout': 0.05}
+
+==================================================
+PHASE 1: Generate base pairs from GT masking
+==================================================
+
+Scenario: i
+  Loaded 313 GT trajectories
+  Base positive pairs: 814
+  Base negative pairs: 2139
+
+Scenario: ii
+  Loaded 99 GT trajectories
+  Base positive pairs: 142
+  Base negative pairs: 126
+
+Scenario: iii
+  Loaded 266 GT trajectories
+  Base positive pairs: 407
+  Base negative pairs: 843
+
+Base totals: 1363 pos, 3108 neg
+
+==================================================
+PHASE 2: Augment × 3 with detection noise
+==================================================
+Balanced base: 1363 pos, 1363 neg
+  Copy 1/3: mask_width=239ft, 1363 pos, 1363 neg
+  Copy 2/3: mask_width=147ft, 1433 pos, 1433 neg
+  Copy 3/3: mask_width=273ft, 1341 pos, 1341 neg
+
+Total augmented: 8274 pairs (4137 pos, 4137 neg)
+
+==================================================
+PHASE 3: Extract 47 features per pair
+==================================================
+
+Dataset shape: (8274, 47)
+Positives: 4137
+Negatives: 4137
+
+--- Feature audit ---
+  y_diff:
+    Pos: mean=1.04, std=0.99, range=[0.00, 5.07]
+    Neg: mean=1.13, std=0.96, range=[0.00, 5.09]
+  time_gap:
+    Pos: mean=3.44, std=3.03, range=[1.08, 31.92]
+    Neg: mean=5.21, std=2.86, range=[0.04, 10.00]
+  spatial_gap:
+    Pos: mean=225.08, std=55.37, range=[141.52, 285.06]
+    Neg: mean=225.21, std=55.38, range=[139.87, 288.60]
+  length_diff:
+    Pos: mean=0.08, std=0.07, range=[0.00, 0.68]
+    Neg: mean=9.21, std=16.93, range=[0.00, 66.67]
+  width_diff:
+    Pos: mean=0.02, std=0.01, range=[0.00, 0.14]
+    Neg: mean=0.82, std=0.93, range=[0.00, 4.09]
+  height_diff:
+    Pos: mean=0.03, std=0.03, range=[0.00, 0.26]
+    Neg: mean=1.92, std=2.67, range=[0.00, 10.99]
+  vel_diff:
+    Pos: mean=60.08, std=45.75, range=[0.04, 280.49]
+    Neg: mean=60.74, std=46.49, range=[0.15, 275.21]
+
+Saved to: /home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/training_dataset_v4.npz
+File size: 1.36 MB
+Diagnostics saved to: /home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/dataset_v3_diagnostics.png
+
+======================================================================
+DATASET v3 REBUILD COMPLETE
+======================================================================
+
+End Time: Sun Feb  8 17:21:03 MST 2026

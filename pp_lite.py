@@ -51,6 +51,8 @@ def main(raw_collection = None, reconciled_collection = None):
     mp_param = mp_manager.dict()
     mp_param.update(parameters)
     mp_param["time_win"] = mp_param["master_time_win"]
+    # NOTE: stitch_thresh is always overridden by master_stitch_thresh here.
+    # Effective threshold = master_stitch_thresh (default 4), not stitch_thresh.
     mp_param["stitcher_args"]["stitch_thresh"] = mp_param["stitcher_args"]["master_stitch_thresh"]
     # mp_param["stitcher_mode"] = "master" # switch from local to master
     

@@ -288,11 +288,28 @@ if __name__ == '__main__':
 
     gt_file = os.path.join(script_dir, f'GT_{suffix}.json')
     raw_file = os.path.join(script_dir, f'RAW_{suffix}.json')
-    rec_default_file = os.path.join(script_dir, f'REC_{suffix}.json')
-    rec_bm_file = os.path.join(script_dir, f'REC_{suffix}_BM.json')
-    # Prefer explicit baseline naming when available.
-    rec_file = rec_bm_file if os.path.exists(rec_bm_file) else rec_default_file
+    rec_current_file = os.path.join(script_dir, f'REC_{suffix}.json')
     rec_lr_legacy_file = os.path.join(script_dir, f'REC_{suffix}_LR.json')
+
+    def first_existing(*paths):
+        for p in paths:
+            if os.path.exists(p):
+                return p
+        return None
+
+    rec_bm_file = first_existing(
+        os.path.join(script_dir, f'REC_{suffix}_BM.json'),
+        os.path.join(script_dir, f'REC_{suffix}_benchmark.json'),
+        os.path.join(script_dir, f'REC_{suffix}_BM Copy.json'),
+    )
+    rec_bhat_file = first_existing(
+        os.path.join(script_dir, f'REC_{suffix}_Bhat.json'),
+        os.path.join(script_dir, f'REC_{suffix}_Bhat(old).json'),
+    )
+    rec_snn_file = first_existing(
+        os.path.join(script_dir, f'REC_{suffix}_SNN.json'),
+        os.path.join(script_dir, f'REC_{suffix}_siamese(old).json'),
+    )
 
     # Handle renamed RAW files
     raw_bhat_file = os.path.join(script_dir, f'RAW_{suffix}_Bhat.json')
@@ -310,49 +327,51 @@ if __name__ == '__main__':
     else:
         print(f"\nSkipping RAW: GT={os.path.exists(gt_file)}, RAW={os.path.exists(raw_file)}")
 
-    # # REC (current method) vs GT
-    # if os.path.exists(gt_file) and os.path.exists(rec_file):
-    #     print(f"\n--- REC_{suffix} (current method) vs GT_{suffix} ---")
-    #     evaluate_with_trackeval(gt_file, rec_file, f'REC_{suffix}')
-    # else:
-    #     print(f"\nSkipping REC: REC_{suffix}.json not found")
+    # REC (current method) vs GT
+    if os.path.exists(gt_file) and os.path.exists(rec_current_file):
+        print(f"\n--- REC_{suffix} (current method) vs GT_{suffix} ---")
+        evaluate_with_trackeval(gt_file, rec_current_file, f'REC_{suffix}')
+    else:
+        print(f"\nSkipping REC current: REC_{suffix}.json not found")
 
     # REC (Benchmark) vs GT
-    if os.path.exists(gt_file) and os.path.exists(rec_file):
+    if os.path.exists(gt_file) and rec_bm_file is not None:
         print(f"\n--- REC_{suffix} (Baseline) vs GT_{suffix} ---")
-        print(f"Using baseline file: {os.path.basename(rec_file)}")
-        evaluate_with_trackeval(gt_file, rec_file, f'REC_{suffix}_BM')
+        print(f"Using baseline file: {os.path.basename(rec_bm_file)}")
+        evaluate_with_trackeval(gt_file, rec_bm_file, f'REC_{suffix}_BM')
     else:
-        print(f"\nSkipping REC: neither REC_{suffix}_BM.json nor REC_{suffix}.json found")
+        print(f"\nSkipping REC baseline: no BM/benchmark file found")
 
     # REC (Bhat) vs GT
-    if os.path.exists(gt_file) and os.path.exists(raw_file):
-        print(f"\n--- RAW_{suffix}_Bhat vs GT_{suffix} ---")
-        evaluate_with_trackeval(gt_file, raw_file, f'RAW_{suffix}')
+    if os.path.exists(gt_file) and rec_bhat_file is not None:
+        print(f"\n--- REC_{suffix}_Bhat vs GT_{suffix} ---")
+        print(f"Using Bhat file: {os.path.basename(rec_bhat_file)}")
+        evaluate_with_trackeval(gt_file, rec_bhat_file, f'REC_{suffix}_Bhat')
     else:
-        print(f"\nSkipping REC: neither REC_{suffix}_Bhat.json nor REC_{suffix}.json found")
+        print(f"\nSkipping REC Bhat: no Bhat file found")
 
-    # REC_LR variants vs GT
-    for feature_count in [6, 7 ,8, 9, 10, 11, 15, 25, 26]:
-        rec_lr_file = os.path.join(script_dir, f'REC_{suffix}_LR_{feature_count}.json')
+    # # REC_LR variants vs GT
+    # for feature_count in [6, 7 ,8, 9, 10, 11, 15, 25, 26]:
+    #     rec_lr_file = os.path.join(script_dir, f'REC_{suffix}_LR_{feature_count}.json')
 
-        # Backward compatibility for older single-file naming.
-        if feature_count == 9 and not os.path.exists(rec_lr_file) and os.path.exists(rec_lr_legacy_file):
-            rec_lr_file = rec_lr_legacy_file
+    #     # Backward compatibility for older single-file naming.
+    #     if feature_count == 9 and not os.path.exists(rec_lr_file) and os.path.exists(rec_lr_legacy_file):
+    #         rec_lr_file = rec_lr_legacy_file
 
-        if os.path.exists(gt_file) and os.path.exists(rec_lr_file):
-            print(f"\n--- REC_{suffix} (Logistic Regression - {feature_count} features) vs GT_{suffix} ---")
-            evaluate_with_trackeval(gt_file, rec_lr_file, f'REC_{suffix}_LR_{feature_count}')
-        else:
-            print(f"\nSkipping REC_LR: REC_{suffix}_LR_{feature_count}.json not found")
+    #     if os.path.exists(gt_file) and os.path.exists(rec_lr_file):
+    #         print(f"\n--- REC_{suffix} (Logistic Regression - {feature_count} features) vs GT_{suffix} ---")
+    #         evaluate_with_trackeval(gt_file, rec_lr_file, f'REC_{suffix}_LR_{feature_count}')
+    #     else:
+    #         print(f"\nSkipping REC_LR: REC_{suffix}_LR_{feature_count}.json not found")
 
     
     # REC (SNN) vs GT
-    if os.path.exists(gt_file) and os.path.exists(raw_file):
-        print(f"\n--- RAW_{suffix}_SNN vs GT_{suffix} ---")
-        evaluate_with_trackeval(gt_file, raw_file, f'RAW_{suffix}')
+    if os.path.exists(gt_file) and rec_snn_file is not None:
+        print(f"\n--- REC_{suffix}_SNN vs GT_{suffix} ---")
+        print(f"Using SNN file: {os.path.basename(rec_snn_file)}")
+        evaluate_with_trackeval(gt_file, rec_snn_file, f'REC_{suffix}_SNN')
     else:
-        print(f"\nSkipping REC: neither REC_{suffix}_SNN.json nor REC_{suffix}.json found")
+        print(f"\nSkipping REC SNN: no SNN file found")
         
 
     # GT vs GT sanity check

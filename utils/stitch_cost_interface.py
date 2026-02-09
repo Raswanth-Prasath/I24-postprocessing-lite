@@ -260,6 +260,8 @@ class LogisticRegressionCostFunction(StitchCostFunction):
         model_path: str,
         scale_factor: float = 5.0,
         time_penalty: float = 0.1,
+        use_logit: bool = False,
+        logit_offset: float = 5.0,
     ):
         """
         Initialize logistic regression cost function.
@@ -269,6 +271,10 @@ class LogisticRegressionCostFunction(StitchCostFunction):
                        Expected: {'model': fitted_lr, 'scaler': fitted_scaler, 'features': feature_list}
             scale_factor: Scale factor to adjust cost range (default 5.0)
             time_penalty: Weight for time gap penalty (default 0.1)
+            use_logit: If True, use raw logit (decision_function) instead of probability.
+                      Produces costs on Bhattacharyya scale (0-10+) so existing thresholds work.
+            logit_offset: Offset added to negative logit for cost calculation (default 5.0).
+                         cost = logit_offset - logit + time_penalty * gap
         """
         import pickle
         import numpy as np
@@ -276,6 +282,8 @@ class LogisticRegressionCostFunction(StitchCostFunction):
         self.np = np
         self.scale_factor = scale_factor
         self.time_penalty = time_penalty
+        self.use_logit = use_logit
+        self.logit_offset = logit_offset
 
         # Resolve relative path
         model_path = self._resolve_path(model_path)
@@ -306,7 +314,10 @@ class LogisticRegressionCostFunction(StitchCostFunction):
 
         print(f"[LogisticRegressionCostFunction] Loaded model from {model_path}")
         print(f"[LogisticRegressionCostFunction] Features: {len(self.selected_features)}")
-        print(f"[LogisticRegressionCostFunction] Scale factor: {scale_factor}, Time penalty: {time_penalty}")
+        if self.use_logit:
+            print(f"[LogisticRegressionCostFunction] Mode: LOGIT (offset={logit_offset}), Time penalty: {time_penalty}")
+        else:
+            print(f"[LogisticRegressionCostFunction] Mode: probability, Scale factor: {scale_factor}, Time penalty: {time_penalty}")
 
     def _resolve_path(self, path: str) -> str:
         """Resolve relative paths to absolute paths based on project root."""
@@ -356,12 +367,15 @@ class LogisticRegressionCostFunction(StitchCostFunction):
             # Scale features
             features_scaled = self.scaler.transform(features)
 
-            # Predict probability of being same vehicle
-            probability = self.model.predict_proba(features_scaled)[0, 1]
-
-            # Convert probability to cost
-            # Higher probability (same vehicle) → lower cost
-            base_cost = (1.0 - probability) * self.scale_factor
+            if self.use_logit:
+                # Logit-based cost: maps to Bhattacharyya scale (0-10+)
+                # logit > 0 means P(same) > 0.5, logit < 0 means P(same) < 0.5
+                logit = self.model.decision_function(features_scaled)[0]
+                base_cost = self.logit_offset - logit
+            else:
+                # Probability-based cost (original)
+                probability = self.model.predict_proba(features_scaled)[0, 1]
+                base_cost = (1.0 - probability) * self.scale_factor
 
             # Add time penalty for larger gaps
             time_cost = self.time_penalty * gap
@@ -388,6 +402,8 @@ class TorchLogisticCostFunction(StitchCostFunction):
         time_penalty: float = 0.1,
         device: str = "cpu",
         save_converted: bool = True,
+        use_logit: bool = False,
+        logit_offset: float = 5.0,
     ):
         import torch
         import pickle
@@ -398,6 +414,8 @@ class TorchLogisticCostFunction(StitchCostFunction):
         self.device = torch.device(device)
         self.scale_factor = scale_factor
         self.time_penalty = time_penalty
+        self.use_logit = use_logit
+        self.logit_offset = logit_offset
 
         resolved = self._resolve_path(model_path)
         path = Path(resolved)
@@ -444,7 +462,10 @@ class TorchLogisticCostFunction(StitchCostFunction):
 
         print(f"[TorchLogisticCostFunction] Loaded model from {path}")
         print(f"[TorchLogisticCostFunction] Features: {len(self.selected_features)}")
-        print(f"[TorchLogisticCostFunction] Scale factor: {scale_factor}, Time penalty: {time_penalty}")
+        if self.use_logit:
+            print(f"[TorchLogisticCostFunction] Mode: LOGIT (offset={logit_offset}), Time penalty: {time_penalty}")
+        else:
+            print(f"[TorchLogisticCostFunction] Mode: probability, Scale factor: {scale_factor}, Time penalty: {time_penalty}")
         print(f"[TorchLogisticCostFunction] Device: {self.device}")
 
     def _resolve_path(self, path: str) -> str:
@@ -482,9 +503,13 @@ class TorchLogisticCostFunction(StitchCostFunction):
 
             with torch.no_grad():
                 logits = torch.matmul(feats_scaled, self.weight.T) + self.bias
-                prob = torch.sigmoid(logits).item()
 
-            base_cost = (1.0 - prob) * self.scale_factor
+                if self.use_logit:
+                    base_cost = self.logit_offset - logits.item()
+                else:
+                    prob = torch.sigmoid(logits).item()
+                    base_cost = (1.0 - prob) * self.scale_factor
+
             time_cost = self.time_penalty * gap
             return float(base_cost + time_cost)
 
@@ -827,11 +852,15 @@ class CostFunctionFactory:
             model_path = CostFunctionFactory._resolve_path(model_path)
             scale_factor = config.get('scale_factor', 5.0)
             time_penalty = config.get('time_penalty', 0.1)
+            use_logit = config.get('use_logit', False)
+            logit_offset = config.get('logit_offset', 5.0)
 
             return LogisticRegressionCostFunction(
                 model_path=model_path,
                 scale_factor=scale_factor,
                 time_penalty=time_penalty,
+                use_logit=use_logit,
+                logit_offset=logit_offset,
             )
 
         elif cost_type in ('torch_logistic', 'torch_lr', 'torch-logistic'):
@@ -844,6 +873,8 @@ class CostFunctionFactory:
             time_penalty = config.get('time_penalty', 0.1)
             device = config.get('device', 'cpu')
             save_converted = config.get('save_converted', True)
+            use_logit = config.get('use_logit', False)
+            logit_offset = config.get('logit_offset', 5.0)
 
             return TorchLogisticCostFunction(
                 model_path=model_path,
@@ -851,6 +882,8 @@ class CostFunctionFactory:
                 time_penalty=time_penalty,
                 device=device,
                 save_converted=save_converted,
+                use_logit=use_logit,
+                logit_offset=logit_offset,
             )
 
         elif cost_type == 'mlp':
