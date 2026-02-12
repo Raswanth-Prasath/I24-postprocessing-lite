@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-Plot IEEE-style time-space diagrams comparing RAW, GT, and REC per direction.
+Plot IEEE-style time-space diagrams comparing RAW and REC per direction.
+
+Each trajectory is drawn in a unique color so individual vehicles are
+distinguishable.
 
 Defaults:
-- Data files in repo root: GT_i.json, RAW_i.json, REC_i.json (and ii/iii)
-- Saves PNGs under outputs/time_space/
+- Data files in repo root: RAW_i.json, REC_i.json (and ii/iii)
+- Saves PNGs under img/
   Example: timespace_i_EB.png, timespace_i_WB.png
 """
 
@@ -14,7 +17,6 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.cm import get_cmap
 
 
 def configure_ieee_style():
@@ -127,8 +129,8 @@ def plot_direction_comparison(
     scenario,
     direction,
     raw_data,
-    gt_data,
     rec_data,
+    gt_data,
     eb_lane_bounds,
     wb_lane_bounds,
     num_lanes_eb,
@@ -147,12 +149,13 @@ def plot_direction_comparison(
 
     rows = [
         ("RAW", raw_data),
-        ("GT", gt_data),
         ("REC", rec_data),
     ]
+    n_rows = len(rows)
 
-    width = max(2.7 * lane_count, 6.0)
-    height = 7.2
+    # Pre-compute GT lane trajectories (drawn as background on every subplot)
+    gt_lanes = collect_trajectories_by_lane(gt_data, direction, lane_bounds, min_timestamp)
+
     # Build per-row lane data first so we can drop empty lanes (e.g., lane 5 in iii)
     row_lanes = []
     non_empty_lanes = set()
@@ -162,6 +165,10 @@ def plot_direction_comparison(
         for lane_num, trajectories in lanes.items():
             if trajectories:
                 non_empty_lanes.add(lane_num)
+    # Also include lanes that have GT data
+    for lane_num, trajectories in gt_lanes.items():
+        if trajectories:
+            non_empty_lanes.add(lane_num)
 
     lane_indices = sorted(non_empty_lanes)
     if not lane_indices:
@@ -170,25 +177,45 @@ def plot_direction_comparison(
 
     lane_count = len(lane_indices)
     width = max(2.7 * lane_count, 6.0)
-    fig, axs = plt.subplots(3, lane_count, figsize=(width, height), sharex="all", sharey="row")
-    axs = np.array(axs).reshape(3, lane_count)
+    height = 5.0
+    fig, axs = plt.subplots(n_rows, lane_count, figsize=(width, height),
+                            sharex="all", sharey="row")
+    axs = np.array(axs).reshape(n_rows, lane_count)
 
-    line_color = "#1f77b4"
-    line_alpha = 0.6
-    line_style = "-"
+    # Use a qualitative colormap to distinguish trajectories
+    cmap = plt.cm.tab20
+
+    line_alpha = 0.8
     line_width = 0.8
+
+    # GT style: semi-transparent black background
+    gt_color = "#bfbfbf"
+    gt_alpha = 0.3
+    gt_linewidth = 0.8
 
     for row_idx, (row_label, lanes) in enumerate(row_lanes):
         for col_idx, lane_num in enumerate(lane_indices):
             ax = axs[row_idx, col_idx]
+
+            # Draw GT as background layer first
+            gt_trajs = gt_lanes.get(lane_num, [])
+            for timestamps, x_positions in gt_trajs:
+                ax.plot(
+                    timestamps, x_positions,
+                    linestyle="-", color=gt_color,
+                    alpha=gt_alpha, linewidth=gt_linewidth,
+                )
+
+            # Draw RAW/REC on top with unique colors
             trajectories = lanes.get(lane_num, [])
 
             for traj_idx, (timestamps, x_positions) in enumerate(trajectories):
+                color = cmap(traj_idx % 20)
                 ax.plot(
                     timestamps,
                     x_positions,
-                    linestyle=line_style,
-                    color=line_color,
+                    linestyle="-",
+                    color=color,
                     alpha=line_alpha,
                     linewidth=line_width,
                 )
@@ -199,7 +226,7 @@ def plot_direction_comparison(
             if col_idx == 0:
                 ax.set_ylabel(f"{row_label}\nX-Position (ft)")
 
-            if row_idx == 2:
+            if row_idx == n_rows - 1:
                 ax.set_xlabel("Time (s)")
 
             ax.grid(True, linestyle=":", alpha=0.3)
@@ -207,7 +234,7 @@ def plot_direction_comparison(
 
     scenario_label = scenario.upper()
     fig.suptitle(f"Scenario {scenario_label} ({direction_label})", y=0.98)
-    plt.subplots_adjust(left=0.08, right=0.99, top=0.93, bottom=0.08, wspace=0.25, hspace=0.25)
+    plt.subplots_adjust(left=0.08, right=0.99, top=0.91, bottom=0.10, wspace=0.25, hspace=0.25)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path, bbox_inches="tight")
@@ -220,15 +247,15 @@ def plot_direction_comparison(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Plot RAW/REC/GT time-space diagrams for scenarios.")
-    parser.add_argument("--data-dir", default=".", help="Directory containing GT/RAW/REC JSON files")
+    parser = argparse.ArgumentParser(description="Plot RAW/REC time-space diagrams for scenarios.")
+    parser.add_argument("--data-dir", default=".", help="Directory containing RAW/REC JSON files")
     parser.add_argument(
         "--scenarios",
         nargs="+",
         default=["i", "ii", "iii"],
         help="Scenarios to plot (e.g., i ii iii)",
     )
-    parser.add_argument("--out-dir", default="outputs/time_space", help="Output directory for PNGs")
+    parser.add_argument("--out-dir", default="img", help="Output directory for PNGs")
     parser.add_argument("--show", action="store_true", help="Show plots interactively")
     args = parser.parse_args()
 
@@ -238,26 +265,29 @@ def main():
     configure_ieee_style()
 
     for scenario in args.scenarios:
-        gt_path = data_dir / f"GT_{scenario}.json"
         raw_path = data_dir / f"RAW_{scenario}.json"
         rec_path = data_dir / f"REC_{scenario}.json"
 
-        if not gt_path.exists() or not raw_path.exists() or not rec_path.exists():
-            print(f"Skipping scenario {scenario}: missing one of {gt_path.name}, {raw_path.name}, {rec_path.name}")
-            continue
+        gt_path = data_dir / f"GT_{scenario}.json"
 
-        gt_data = load_json(gt_path)
+        if not raw_path.exists() or not rec_path.exists():
+            print(f"Skipping scenario {scenario}: missing {raw_path.name} or {rec_path.name}")
+            continue
+        if not gt_path.exists():
+            print(f"Warning: GT_{scenario}.json not found, GT overlay will be empty")
+
         raw_data = load_json(raw_path)
         rec_data = load_json(rec_path)
+        gt_data = load_json(gt_path) if gt_path.exists() else []
 
         eb_bounds, wb_bounds, n_eb, n_wb, min_ts = calculate_lane_bounds(
-            [gt_data, raw_data, rec_data]
+            [raw_data, rec_data, gt_data]
         )
 
         print(f"\nScenario {scenario}:")
-        print(f"  GT:  {len(gt_data)}")
-        print(f"  RAW: {len(raw_data)}")
+        print(f"  RAW: {len(raw_data)} ({raw_path.name})")
         print(f"  REC: {len(rec_data)}")
+        print(f"  GT:  {len(gt_data)} (overlay)")
 
         for direction in (1, -1):
             direction_label = "EB" if direction == 1 else "WB"
@@ -265,8 +295,8 @@ def main():
                 scenario,
                 direction,
                 raw_data,
-                gt_data,
                 rec_data,
+                gt_data,
                 eb_bounds,
                 wb_bounds,
                 n_eb,

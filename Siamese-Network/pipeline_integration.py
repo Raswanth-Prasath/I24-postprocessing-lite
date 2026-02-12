@@ -63,12 +63,16 @@ class SiameseCostFunction:
             fragment: Fragment dictionary from I24-postprocessing-lite
 
         Returns:
-            Array of shape (seq_len, 4) with [x, y, velocity, time_normalized]
+            Array of shape (seq_len, 4) with [x_rel, y_rel, velocity, time_normalized]
         """
         # Get data
         timestamps = np.array(fragment['timestamp'])
         x_pos = np.array(fragment['x_position'])
         y_pos = np.array(fragment['y_position'])
+
+        # 2. Use Relative Coordinates (Translation Invariance)
+        x_rel = x_pos - x_pos[0]
+        y_rel = y_pos - y_pos[0]
 
         # Get or compute velocity
         if 'velocity' in fragment and len(fragment['velocity']) > 0:
@@ -84,9 +88,40 @@ class SiameseCostFunction:
         t_norm = timestamps - timestamps[0]
 
         # Build sequence
-        sequence = np.column_stack([x_pos, y_pos, velocity, t_norm])
+        sequence = np.column_stack([x_rel, y_rel, velocity, t_norm])
 
         return sequence.astype(np.float32)
+
+    def _extract_endpoint_features(self, frag_a: dict, frag_b: dict) -> np.ndarray:
+        """Extract endpoint features (gap metrics) for similarity head"""
+        t_a_end = frag_a['timestamp'][-1]
+        t_b_start = frag_b['timestamp'][0]
+        time_gap = t_b_start - t_a_end
+
+        x_a_end = frag_a['x_position'][-1]
+        x_b_start = frag_b['x_position'][0]
+        x_gap = x_b_start - x_a_end
+
+        y_gap = frag_b['y_position'][0] - frag_a['y_position'][-1]
+
+        # Velocity difference
+        if 'velocity' in frag_a and len(frag_a['velocity']) > 0:
+            v_a_end = frag_a['velocity'][-1]
+        else:
+            dt = frag_a['timestamp'][-1] - frag_a['timestamp'][-2] if len(frag_a['timestamp']) > 1 else 1e-6
+            dx = frag_a['x_position'][-1] - frag_a['x_position'][-2] if len(frag_a['timestamp']) > 1 else 0
+            v_a_end = dx / (dt + 1e-6)
+
+        if 'velocity' in frag_b and len(frag_b['velocity']) > 0:
+            v_b_start = frag_b['velocity'][0]
+        else:
+            dt = frag_b['timestamp'][1] - frag_b['timestamp'][0] if len(frag_b['timestamp']) > 1 else 1e-6
+            dx = frag_b['x_position'][1] - frag_b['x_position'][0] if len(frag_b['timestamp']) > 1 else 0
+            v_b_start = dx / (dt + 1e-6)
+
+        velocity_diff = v_b_start - v_a_end
+
+        return np.array([time_gap, x_gap, y_gap, velocity_diff], dtype=np.float32)
 
     def _normalize_sequence(self, sequence: np.ndarray) -> np.ndarray:
         """Normalize sequence (if normalization stats available)"""
@@ -109,6 +144,9 @@ class SiameseCostFunction:
         # Extract sequences
         seq_a = self._extract_sequence(track1)
         seq_b = self._extract_sequence(track2)
+        
+        # Extract endpoint features
+        endpoints = self._extract_endpoint_features(track1, track2)
 
         # Normalize
         seq_a = self._normalize_sequence(seq_a)
@@ -119,9 +157,10 @@ class SiameseCostFunction:
         seq_b = torch.FloatTensor(seq_b).unsqueeze(0).to(self.device)  # (1, len_b, 4)
         len_a = torch.LongTensor([seq_a.size(1)]).to(self.device)
         len_b = torch.LongTensor([seq_b.size(1)]).to(self.device)
+        endpoints = torch.FloatTensor(endpoints).unsqueeze(0).to(self.device)
 
         # Forward pass
-        similarity, _, _ = self.model(seq_a, len_a, seq_b, len_b)
+        similarity, _, _ = self.model(seq_a, len_a, seq_b, len_b, endpoints)
 
         # Return as float
         return similarity.item()

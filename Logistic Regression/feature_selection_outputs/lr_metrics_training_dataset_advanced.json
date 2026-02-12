@@ -1,0 +1,170 @@
+{
+  "dataset": "Logistic Regression/training_dataset_advanced.npz",
+  "model_path": "Logistic Regression/model_artifacts/consensus_top10_full47.pkl",
+  "n_samples": 2100,
+  "n_features_full": 47,
+  "n_features_model": 10,
+  "influence_method": "manual",
+  "thresholds": {
+    "classification_threshold": 0.5,
+    "cook_threshold": 0.0019047619047619048,
+    "leverage_threshold": 0.010476190476190476,
+    "std_residual_threshold": 3.0
+  },
+  "metrics_oof": {
+    "threshold": 0.5,
+    "roc_auc": 0.9993641723356009,
+    "pr_auc": 0.9993024704557285,
+    "log_loss": 0.03736773985974537,
+    "brier_score": 0.008885218018489436,
+    "precision": 0.9812382739212008,
+    "recall": 0.9961904761904762,
+    "specificity": 0.9809523809523809,
+    "f1": 0.9886578449905482,
+    "tp": 1046,
+    "tn": 1030,
+    "fp": 20,
+    "fn": 4,
+    "ece": 0.017651180072673224
+  },
+  "calibration_bins": [
+    {
+      "bin": 0,
+      "count": 988,
+      "pred_mean": 0.0038277597364247983,
+      "obs_rate": 0.0,
+      "abs_gap": 0.0038277597364247983
+    },
+    {
+      "bin": 1,
+      "count": 27,
+      "pred_mean": 0.13921394361750658,
+      "obs_rate": 0.07407407407407407,
+      "abs_gap": 0.06513986954343251
+    },
+    {
+      "bin": 2,
+      "count": 8,
+      "pred_mean": 0.24131622810991354,
+      "obs_rate": 0.125,
+      "abs_gap": 0.11631622810991354
+    },
+    {
+      "bin": 3,
+      "count": 5,
+      "pred_mean": 0.3155433805493429,
+      "obs_rate": 0.0,
+      "abs_gap": 0.3155433805493429
+    },
+    {
+      "bin": 4,
+      "count": 6,
+      "pred_mean": 0.45265032012740547,
+      "obs_rate": 0.16666666666666666,
+      "abs_gap": 0.28598365346073884
+    },
+    {
+      "bin": 5,
+      "count": 8,
+      "pred_mean": 0.536231425660159,
+      "obs_rate": 0.25,
+      "abs_gap": 0.286231425660159
+    },
+    {
+      "bin": 6,
+      "count": 3,
+      "pred_mean": 0.6518840570670663,
+      "obs_rate": 0.6666666666666666,
+      "abs_gap": 0.014782609599600316
+    },
+    {
+      "bin": 7,
+      "count": 8,
+      "pred_mean": 0.7537723658741283,
+      "obs_rate": 0.5,
+      "abs_gap": 0.2537723658741283
+    },
+    {
+      "bin": 8,
+      "count": 25,
+      "pred_mean": 0.8626104633018181,
+      "obs_rate": 0.68,
+      "abs_gap": 0.18261046330181807
+    },
+    {
+      "bin": 9,
+      "count": 1022,
+      "pred_mean": 0.9810439465133617,
+      "obs_rate": 0.9990215264187867,
+      "abs_gap": 0.017977579905425034
+    }
+  ],
+  "influence_summary": {
+    "cook_flag_count": 42,
+    "leverage_flag_count": 176,
+    "residual_flag_count": 1,
+    "influential_count": 177
+  },
+  "shortcut_risk_top_features": [
+    {
+      "feature": "projection_error_x_max",
+      "abs_corr": 0.6977468863908093,
+      "ks": 0.7885714285714286,
+      "risk_score": 0.7431591574811189
+    },
+    {
+      "feature": "y_diff",
+      "abs_corr": 0.6839890352709241,
+      "ks": 0.7752380952380953,
+      "risk_score": 0.7296135652545097
+    },
+    {
+      "feature": "projection_error_y_max",
+      "abs_corr": 0.6766077446549074,
+      "ks": 0.7580952380952382,
+      "risk_score": 0.7173514913750727
+    },
+    {
+      "feature": "bhattacharyya_coeff",
+      "abs_corr": 0.43098352344921753,
+      "ks": 0.7561904761904763,
+      "risk_score": 0.5935869998198469
+    },
+    {
+      "feature": "bhattacharyya_distance",
+      "abs_corr": 0.3126541568497839,
+      "ks": 0.7561904761904762,
+      "risk_score": 0.5344223165201301
+    },
+    {
+      "feature": "width_diff",
+      "abs_corr": 0.41225032835055375,
+      "ks": 0.41809523809523813,
+      "risk_score": 0.41517278322289597
+    },
+    {
+      "feature": "length_diff",
+      "abs_corr": 0.33238903966538563,
+      "ks": 0.47523809523809524,
+      "risk_score": 0.40381356745174046
+    },
+    {
+      "feature": "projection_error_x_mean",
+      "abs_corr": 0.16121643860726445,
+      "ks": 0.4933333333333334,
+      "risk_score": 0.3272748859702989
+    },
+    {
+      "feature": "spatial_gap",
+      "abs_corr": 0.17128060119942815,
+      "ks": 0.4504761904761905,
+      "risk_score": 0.3108783958378093
+    },
+    {
+      "feature": "duration_a",
+      "abs_corr": 0.3181481523840642,
+      "ks": 0.2695238095238096,
+      "risk_score": 0.2938359809539369
+    }
+  ]
+}

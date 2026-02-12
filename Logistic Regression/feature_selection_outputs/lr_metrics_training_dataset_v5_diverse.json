@@ -1,0 +1,170 @@
+{
+  "dataset": "Logistic Regression/data/training_dataset_v5_diverse.npz",
+  "model_path": "Logistic Regression/model_artifacts/consensus_top10_v5_diverse.pkl",
+  "n_samples": 6300,
+  "n_features_full": 47,
+  "n_features_model": 10,
+  "influence_method": "statsmodels",
+  "thresholds": {
+    "classification_threshold": 0.5,
+    "cook_threshold": 0.0006349206349206349,
+    "leverage_threshold": 0.003492063492063492,
+    "std_residual_threshold": 3.0
+  },
+  "metrics_oof": {
+    "threshold": 0.5,
+    "roc_auc": 0.9884183421516753,
+    "pr_auc": 0.9823992058682607,
+    "log_loss": 0.12583484108776577,
+    "brier_score": 0.02964265928747425,
+    "precision": 0.9534739454094293,
+    "recall": 0.9758730158730159,
+    "specificity": 0.9523809523809523,
+    "f1": 0.9645434577973016,
+    "tp": 3074,
+    "tn": 3000,
+    "fp": 150,
+    "fn": 76,
+    "ece": 0.020577532092421927
+  },
+  "calibration_bins": [
+    {
+      "bin": 0,
+      "count": 2706,
+      "pred_mean": 0.008141288356888217,
+      "obs_rate": 0.011086474501108648,
+      "abs_gap": 0.0029451861442204314
+    },
+    {
+      "bin": 1,
+      "count": 151,
+      "pred_mean": 0.14296795160899947,
+      "obs_rate": 0.052980132450331126,
+      "abs_gap": 0.08998781915866835
+    },
+    {
+      "bin": 2,
+      "count": 89,
+      "pred_mean": 0.2414910330233986,
+      "obs_rate": 0.1348314606741573,
+      "abs_gap": 0.10665957234924131
+    },
+    {
+      "bin": 3,
+      "count": 70,
+      "pred_mean": 0.3531476765016855,
+      "obs_rate": 0.14285714285714285,
+      "abs_gap": 0.21029053364454264
+    },
+    {
+      "bin": 4,
+      "count": 60,
+      "pred_mean": 0.4435334022754723,
+      "obs_rate": 0.26666666666666666,
+      "abs_gap": 0.17686673560880561
+    },
+    {
+      "bin": 5,
+      "count": 55,
+      "pred_mean": 0.5504752923412781,
+      "obs_rate": 0.38181818181818183,
+      "abs_gap": 0.1686571105230963
+    },
+    {
+      "bin": 6,
+      "count": 47,
+      "pred_mean": 0.6459359568554998,
+      "obs_rate": 0.46808510638297873,
+      "abs_gap": 0.17785085047252103
+    },
+    {
+      "bin": 7,
+      "count": 85,
+      "pred_mean": 0.754903597694713,
+      "obs_rate": 0.7764705882352941,
+      "abs_gap": 0.021566990540581088
+    },
+    {
+      "bin": 8,
+      "count": 246,
+      "pred_mean": 0.8619444048094317,
+      "obs_rate": 0.8821138211382114,
+      "abs_gap": 0.020169416328779666
+    },
+    {
+      "bin": 9,
+      "count": 2791,
+      "pred_mean": 0.9670994006848793,
+      "obs_rate": 0.9845933357219635,
+      "abs_gap": 0.017493935037084185
+    }
+  ],
+  "influence_summary": {
+    "cook_flag_count": 250,
+    "leverage_flag_count": 184,
+    "residual_flag_count": 84,
+    "influential_count": 250
+  },
+  "shortcut_risk_top_features": [
+    {
+      "feature": "projection_error_x_max",
+      "abs_corr": 0.6265170198239476,
+      "ks": 0.8796825396825397,
+      "risk_score": 0.7530997797532437
+    },
+    {
+      "feature": "width_diff",
+      "abs_corr": 0.4709286202246165,
+      "ks": 0.6415873015873016,
+      "risk_score": 0.556257960905959
+    },
+    {
+      "feature": "height_diff",
+      "abs_corr": 0.3720277175366654,
+      "ks": 0.6336507936507937,
+      "risk_score": 0.5028392555937296
+    },
+    {
+      "feature": "length_diff",
+      "abs_corr": 0.3179547510741645,
+      "ks": 0.6453968253968254,
+      "risk_score": 0.48167578823549495
+    },
+    {
+      "feature": "bhattacharyya_coeff",
+      "abs_corr": 0.4118691054835927,
+      "ks": 0.5377777777777778,
+      "risk_score": 0.47482344163068524
+    },
+    {
+      "feature": "bhattacharyya_distance",
+      "abs_corr": 0.1768870545526302,
+      "ks": 0.5377777777777778,
+      "risk_score": 0.357332416165204
+    },
+    {
+      "feature": "projection_error_y_max",
+      "abs_corr": 0.3728336556119867,
+      "ks": 0.3130158730158731,
+      "risk_score": 0.34292476431392993
+    },
+    {
+      "feature": "y_diff",
+      "abs_corr": 0.3477717373421065,
+      "ks": 0.2736507936507937,
+      "risk_score": 0.3107112654964501
+    },
+    {
+      "feature": "projection_error_x_mean",
+      "abs_corr": 0.08492003049215899,
+      "ks": 0.4971428571428572,
+      "risk_score": 0.2910314438175081
+    },
+    {
+      "feature": "time_gap",
+      "abs_corr": 0.1784856552348956,
+      "ks": 0.3158730158730159,
+      "risk_score": 0.24717933555395577
+    }
+  ]
+}

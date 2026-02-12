@@ -54,10 +54,6 @@ def load_pairs(dataset_names, data_dir, max_time_gap=5.0):
     for name in dataset_names:
         gt_path = data_dir / f"GT_{name}.json"
         raw_path = data_dir / f"RAW_{name}.json"
-        if not raw_path.exists():
-            raw_bhat = data_dir / f"RAW_{name}_Bhat.json"
-            if raw_bhat.exists():
-                raw_path = raw_bhat
 
         print(f"Loading {name}...")
         with open(raw_path, 'r') as f:

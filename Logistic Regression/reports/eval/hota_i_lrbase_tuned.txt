@@ -1,0 +1,30 @@
+============================================================
+TrackEval Metrics for explicit files: i_lrbase_tuned
+============================================================
+Loaded 313 GT trajectories, 494 tracker trajectories
+
+==================================================
+  Results for i_lrbase_tuned
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.396
+  DetA                 0.365
+  AssA                 0.456
+  LocA                 0.676
+  MOTA                 0.647
+  MOTP                 0.539
+  IDF1                 0.398
+  IDR                  0.381
+  IDP                  0.417
+  Precision            0.855
+  Recall               0.781
+  IDsw                   193
+  FP                   16021
+  FN                   26457
+  Frag                   268
+  No. trajs              494
+  Fgmt/GT               1.58
+  Sw/GT                 0.62
+==================================================
+

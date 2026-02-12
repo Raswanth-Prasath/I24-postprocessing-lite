@@ -42,9 +42,9 @@
     },
     "cost_function": {
         "type": "logistic_regression",
-        "model_path": "Logistic Regression/model_artifacts/consensus_top10_full47.pkl",
+        "model_path": "Logistic Regression/model_artifacts/consensus_10features_full47.pkl",
         "use_logit": true,
-        "logit_offset": 3.0,
+        "logit_offset": 5.0,
         "time_penalty": 0.1
     },
     "merge_thresh": 0,
@@ -69,4 +69,3 @@
     "ph": 5,
     "ih": 1
 }
-

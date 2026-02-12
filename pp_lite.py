@@ -22,12 +22,15 @@ import merge
 
 
 
-def main(raw_collection = None, reconciled_collection = None):
+def main(raw_collection=None, reconciled_collection=None, config=None):
 
     # %% Parameters, data structures and processes
     # GET PARAMAETERS
-    with open("parameters.json") as f:
-        parameters = json.load(f)
+    if config is None:
+        with open("parameters.json") as f:
+            parameters = json.load(f)
+    else:
+        parameters = config
     
     if raw_collection:
         parameters["raw_collection"] = raw_collection
@@ -196,16 +199,32 @@ def main(raw_collection = None, reconciled_collection = None):
     
     
 if __name__ == '__main__':
-    import sys
+    import argparse
 
-    if len(sys.argv) > 1:
-        suffix = sys.argv[1]  # e.g., 'i', 'ii', 'iii'
-        raw_collection = f"RAW_{suffix}"
-        reconciled_collection = f"REC_{suffix}"
+    parser = argparse.ArgumentParser(description="I24 postprocessing pipeline")
+    parser.add_argument("suffix", nargs="?", default=None,
+                        help="Scenario suffix: i, ii, or iii")
+    parser.add_argument("--config", default=None,
+                        help="Path to config JSON file (default: parameters.json)")
+    parser.add_argument("--tag", default=None,
+                        help="Method tag appended to output filename, e.g. LR -> REC_i_LR.json")
+    args = parser.parse_args()
+
+    # Load config if specified
+    config = None
+    if args.config:
+        with open(args.config) as f:
+            config = json.load(f)
+
+    if args.suffix:
+        raw_collection = f"RAW_{args.suffix}"
+        if args.tag:
+            reconciled_collection = f"REC_{args.suffix}_{args.tag}"
+        else:
+            reconciled_collection = f"REC_{args.suffix}"
         print(f"Running with: {raw_collection} -> {reconciled_collection}")
-        main(raw_collection, reconciled_collection)
+        main(raw_collection, reconciled_collection, config=config)
     else:
         # Use defaults from parameters.json
-        main()
-    
+        main(config=config)
     

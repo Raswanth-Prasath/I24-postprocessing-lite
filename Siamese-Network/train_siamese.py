@@ -356,7 +356,7 @@ def main():
         'use_enhanced_dataset': True,  # Use trajectory masking + hard negative mining
         'loss': {
             'margin': 2.0,
-            'alpha': 0.5  # Weight for contrastive loss
+            'alpha': 0.1  # Weight for contrastive loss (BCE is primary for inference)
         },
         'scheduler': {
             'step_size': 15,

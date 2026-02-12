@@ -1,0 +1,42 @@
+{
+  "roc_auc": 0.9970591141581302,
+  "avg_precision": 0.9966020427162671,
+  "accuracy": 0.9804772234273319,
+  "confusion_matrix": [
+    [
+      445,
+      16
+    ],
+    [
+      2,
+      459
+    ]
+  ],
+  "classification_report": {
+    "Different Vehicle": {
+      "precision": 0.9955257270693513,
+      "recall": 0.96529284164859,
+      "f1-score": 0.9801762114537445,
+      "support": 461.0
+    },
+    "Same Vehicle": {
+      "precision": 0.9663157894736842,
+      "recall": 0.9956616052060737,
+      "f1-score": 0.9807692307692307,
+      "support": 461.0
+    },
+    "accuracy": 0.9804772234273319,
+    "macro avg": {
+      "precision": 0.9809207582715178,
+      "recall": 0.9804772234273318,
+      "f1-score": 0.9804727211114876,
+      "support": 922.0
+    },
+    "weighted avg": {
+      "precision": 0.9809207582715178,
+      "recall": 0.9804772234273319,
+      "f1-score": 0.9804727211114875,
+      "support": 922.0
+    }
+  }
+}

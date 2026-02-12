@@ -150,6 +150,10 @@ class TrajectoryPairDataset(Dataset):
         x_pos = np.array(fragment['x_position'])
         y_pos = np.array(fragment['y_position'])
 
+        # 2. Use Relative Coordinates (Translation Invariance)
+        x_rel = x_pos - x_pos[0]
+        y_rel = y_pos - y_pos[0]
+
         # Get velocity
         if 'velocity' in fragment and len(fragment['velocity']) > 0:
             velocity = np.array(fragment['velocity'])
@@ -163,7 +167,7 @@ class TrajectoryPairDataset(Dataset):
 
         # Build sequence
         for i in range(len(timestamps)):
-            point = [x_pos[i], y_pos[i], velocity[i], t_norm[i]]
+            point = [x_rel[i], y_rel[i], velocity[i], t_norm[i]]
             seq_data.append(point)
 
         return np.array(seq_data, dtype=np.float32)
@@ -683,6 +687,10 @@ class EnhancedTrajectoryPairDataset(Dataset):
         x_pos = np.array(fragment['x_position'])
         y_pos = np.array(fragment['y_position'])
 
+        # 2. Use Relative Coordinates (Translation Invariance)
+        x_rel = x_pos - x_pos[0]
+        y_rel = y_pos - y_pos[0]
+
         if 'velocity' in fragment and len(fragment['velocity']) > 0:
             velocity = np.array(fragment['velocity'])
         else:
@@ -694,7 +702,7 @@ class EnhancedTrajectoryPairDataset(Dataset):
 
         seq_data = []
         for i in range(len(timestamps)):
-            point = [x_pos[i], y_pos[i], velocity[i], t_norm[i]]
+            point = [x_rel[i], y_rel[i], velocity[i], t_norm[i]]
             seq_data.append(point)
 
         return np.array(seq_data, dtype=np.float32)

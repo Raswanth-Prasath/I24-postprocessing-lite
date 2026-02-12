@@ -27,6 +27,9 @@ from collections import defaultdict
 from copy import deepcopy
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+LR_DIR = Path(__file__).resolve().parent
+CANONICAL_OUTPUT_DIR = LR_DIR / "outputs"
+CANONICAL_DATA_DIR = LR_DIR / "data"
 DATASETS = ['i', 'ii', 'iii']
 
 # 4 mask center positions along the ~2200 ft corridor
@@ -433,7 +436,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Rebuild LR training dataset v3 using GT masking + augmentation"
     )
-    parser.add_argument('--output', default='training_dataset_v3.npz')
+    parser.add_argument('--output', default='data/training_dataset_v3.npz')
     parser.add_argument('--max-y-diff', type=float, default=5.0,
                         help='Max y_diff for BOTH pos and neg pairs (ft)')
     parser.add_argument('--time-window', type=float, default=10.0,
@@ -487,7 +490,8 @@ def main():
         if not args.skip_timespace:
             for direction in [1, -1]:
                 dl = 'EB' if direction == 1 else 'WB'
-                out = Path(__file__).resolve().parent / f'timespace_v3_{scenario}_{dl}.png'
+                out = CANONICAL_OUTPUT_DIR / f"timespace_v3_{scenario}_{dl}.png"
+                out.parent.mkdir(parents=True, exist_ok=True)
                 generate_timespace(pos, neg, scenario, direction, out)
 
         all_base_pos.extend(pos)
@@ -614,7 +618,10 @@ def main():
               f"range=[{neg_vals.min():.2f}, {neg_vals.max():.2f}]")
 
     # ── Save ──
-    output_path = Path(__file__).resolve().parent / args.output
+    output_path = Path(args.output)
+    if not output_path.is_absolute():
+        output_path = LR_DIR / output_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(output_path, X=X, y=y,
                         feature_names=np.array(feature_names))
     print(f"\nSaved to: {output_path}")
@@ -622,7 +629,8 @@ def main():
 
     # ── Diagnostics ──
     if not args.skip_diagnostics:
-        diag_path = Path(__file__).resolve().parent / 'dataset_v3_diagnostics.png'
+        diag_path = CANONICAL_OUTPUT_DIR / "dataset_v3_diagnostics.png"
+        diag_path.parent.mkdir(parents=True, exist_ok=True)
         generate_diagnostics(X, y, feature_names, diag_path)
 
     print("\n" + "=" * 70)

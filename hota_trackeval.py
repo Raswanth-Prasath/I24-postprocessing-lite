@@ -11,7 +11,6 @@ import numpy as np
 import os
 import sys
 
-from trackeval.metrics import HOTA, CLEAR, Identity
 
 from mot_i24 import (
     load_trajectories,
@@ -163,6 +162,12 @@ def evaluate_with_trackeval(gt_file, tracker_file, name):
     Returns:
         dict of metric results
     """
+    try:
+        from trackeval.metrics import HOTA, CLEAR, Identity
+    except ImportError:
+        print("TrackEval dependency is missing. Install trackeval in this environment.")
+        return None
+
     # Load trajectories
     try:
         gt_trajs = load_trajectories(gt_file)
@@ -281,9 +286,10 @@ def evaluate_with_trackeval(gt_file, tracker_file, name):
     return results
 
 
-if __name__ == '__main__':
-    suffix = sys.argv[1] if len(sys.argv) > 1 else 'i'
 
+
+def run_suffix_mode(suffix):
+    """Run legacy scenario-wide evaluation mode for a suffix."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     gt_file = os.path.join(script_dir, f'GT_{suffix}.json')
@@ -350,21 +356,31 @@ if __name__ == '__main__':
     else:
         print(f"\nSkipping REC Bhat: no Bhat file found")
 
-    # # REC_LR variants vs GT
-    # for feature_count in [6, 7 ,8, 9, 10, 11, 15, 25, 26]:
-    #     rec_lr_file = os.path.join(script_dir, f'REC_{suffix}_LR_{feature_count}.json')
+    # REC_LR variants vs GT
+    for feature_count in [10]:
+        rec_lr_file = os.path.join(script_dir, f'REC_{suffix}_LR_{feature_count}.json')
 
-    #     # Backward compatibility for older single-file naming.
-    #     if feature_count == 9 and not os.path.exists(rec_lr_file) and os.path.exists(rec_lr_legacy_file):
-    #         rec_lr_file = rec_lr_legacy_file
+        # Backward compatibility for older single-file naming.
+        if feature_count == 9 and not os.path.exists(rec_lr_file) and os.path.exists(rec_lr_legacy_file):
+            rec_lr_file = rec_lr_legacy_file
 
-    #     if os.path.exists(gt_file) and os.path.exists(rec_lr_file):
-    #         print(f"\n--- REC_{suffix} (Logistic Regression - {feature_count} features) vs GT_{suffix} ---")
-    #         evaluate_with_trackeval(gt_file, rec_lr_file, f'REC_{suffix}_LR_{feature_count}')
-    #     else:
-    #         print(f"\nSkipping REC_LR: REC_{suffix}_LR_{feature_count}.json not found")
+        if os.path.exists(gt_file) and os.path.exists(rec_lr_file):
+            print(f"\n--- REC_{suffix} (Logistic Regression - {feature_count} features) vs GT_{suffix} ---")
+            evaluate_with_trackeval(gt_file, rec_lr_file, f'REC_{suffix}_LR_{feature_count}')
+        else:
+            print(f"\nSkipping REC_LR: REC_{suffix}_LR_{feature_count}.json not found")
 
-    
+    # REC (LR) vs GT
+    rec_lr_file = first_existing(
+        os.path.join(script_dir, f'REC_{suffix}_LR.json'),
+    )
+    if os.path.exists(gt_file) and rec_lr_file is not None:
+        print(f"\n--- REC_{suffix}_LR vs GT_{suffix} ---")
+        print(f"Using LR file: {os.path.basename(rec_lr_file)}")
+        evaluate_with_trackeval(gt_file, rec_lr_file, f'REC_{suffix}_LR')
+    else:
+        print(f"\nSkipping REC LR: no LR file found")
+
     # REC (SNN) vs GT
     if os.path.exists(gt_file) and rec_snn_file is not None:
         print(f"\n--- REC_{suffix}_SNN vs GT_{suffix} ---")
@@ -372,9 +388,48 @@ if __name__ == '__main__':
         evaluate_with_trackeval(gt_file, rec_snn_file, f'REC_{suffix}_SNN')
     else:
         print(f"\nSkipping REC SNN: no SNN file found")
-        
 
     # GT vs GT sanity check
     if os.path.exists(gt_file):
         print(f"\n--- GT_{suffix} vs GT_{suffix} (sanity check) ---")
         evaluate_with_trackeval(gt_file, gt_file, f'GT_{suffix}')
+
+
+def parse_args():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Evaluate I24 tracking outputs with TrackEval metrics",
+    )
+    parser.add_argument(
+        "suffix",
+        nargs="?",
+        default="i",
+        help="Scenario suffix (i, ii, iii) for legacy batch mode",
+    )
+    parser.add_argument("--gt-file", default=None,
+                        help="Explicit GT file for single-file evaluation mode")
+    parser.add_argument("--tracker-file", default=None,
+                        help="Explicit tracker REC file for single-file evaluation mode")
+    parser.add_argument("--name", default=None,
+                        help="Display name for single-file evaluation mode")
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    # Targeted single-file mode
+    if args.tracker_file is not None:
+        if args.gt_file is None:
+            raise SystemExit("--gt-file is required when --tracker-file is provided")
+
+        eval_name = args.name or os.path.basename(args.tracker_file)
+        print("=" * 60)
+        print(f"TrackEval Metrics for explicit files: {eval_name}")
+        print("=" * 60)
+        evaluate_with_trackeval(args.gt_file, args.tracker_file, eval_name)
+        raise SystemExit(0)
+
+    # Legacy suffix mode
+    run_suffix_mode(args.suffix)

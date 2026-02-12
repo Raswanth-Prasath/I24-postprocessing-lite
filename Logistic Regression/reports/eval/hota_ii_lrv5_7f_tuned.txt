@@ -1,0 +1,30 @@
+============================================================
+TrackEval Metrics for explicit files: ii_lrv5_7f_tuned
+============================================================
+Loaded 99 GT trajectories, 172 tracker trajectories
+
+==================================================
+  Results for ii_lrv5_7f_tuned
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.479
+  DetA                 0.478
+  AssA                 0.484
+  LocA                 0.745
+  MOTA                 0.715
+  MOTP                 0.674
+  IDF1                 0.657
+  IDR                  0.618
+  IDP                  0.700
+  Precision            0.906
+  Recall               0.800
+  IDsw                    65
+  FP                    5348
+  FN                   12857
+  Frag                   318
+  No. trajs              172
+  Fgmt/GT               1.74
+  Sw/GT                 0.66
+==================================================
+

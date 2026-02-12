@@ -1,0 +1,20 @@
+[
+  {
+    "pair_index": 0,
+    "prediction": 0.9541780948638916,
+    "label": 1.0,
+    "len_a": 181,
+    "len_b": 26,
+    "file_a": "attention_pair_0_A.png",
+    "file_b": "attention_pair_0_B.png"
+  },
+  {
+    "pair_index": 1,
+    "prediction": 0.9942232966423035,
+    "label": 1.0,
+    "len_a": 41,
+    "len_b": 7,
+    "file_a": "attention_pair_1_A.png",
+    "file_b": "attention_pair_1_B.png"
+  }
+]

@@ -6,6 +6,7 @@ Allows switching between Bhattacharyya distance and learned Siamese network.
 """
 
 from abc import ABC, abstractmethod
+import json
 import sys
 from pathlib import Path
 
@@ -700,16 +701,23 @@ class TransformerCostFunction(StitchCostFunction):
     Transformer-based cost function for trajectory stitching.
     """
 
-    def __init__(self, checkpoint_path: str, device: str = 'cpu',
-                 scale_factor: float = 5.0, time_penalty: float = 0.1):
+    def __init__(self, checkpoint_path: str, device: str = None,
+                 scale_factor: float = 5.0, time_penalty: float = 0.1,
+                 calibration_mode: str = "isotonic",
+                 calibration_path: str = None):
         import torch
         import numpy as np
 
         self.torch = torch
         self.np = np
+        if device is None:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.device = torch.device(device)
         self.scale_factor = scale_factor
         self.time_penalty = time_penalty
+        self.calibration_mode = (calibration_mode or "isotonic").lower()
+        self.calibration_path = calibration_path
+        self.calibration = None
 
         models_dir = Path(__file__).parent.parent / "models"
         if str(models_dir) not in sys.path:
@@ -725,7 +733,25 @@ class TransformerCostFunction(StitchCostFunction):
 
         model_config = ckpt.get('model_config', {})
         self.model = SiameseTransformerNetwork(**model_config)
-        self.model.load_state_dict(ckpt['model_state_dict'])
+        load_result = self.model.load_state_dict(ckpt['model_state_dict'], strict=False)
+        legacy_time_bias_keys = {
+            "encoder.time_bias.proj.0.weight",
+            "encoder.time_bias.proj.0.bias",
+            "encoder.time_bias.proj.2.weight",
+            "encoder.time_bias.proj.2.bias",
+        }
+        missing_set = set(load_result.missing_keys)
+        unexpected_set = set(load_result.unexpected_keys)
+        if missing_set and missing_set.issubset(legacy_time_bias_keys) and not unexpected_set:
+            print(
+                "[TransformerCostFunction] Info: legacy checkpoint detected (no time_bias weights); "
+                "using safe zero-initialized time bias."
+            )
+        else:
+            if load_result.missing_keys:
+                print(f"[TransformerCostFunction] Warning: missing checkpoint keys: {load_result.missing_keys}")
+            if load_result.unexpected_keys:
+                print(f"[TransformerCostFunction] Warning: unexpected checkpoint keys: {load_result.unexpected_keys}")
         self.model = self.model.to(self.device)
         self.model.eval()
 
@@ -735,6 +761,7 @@ class TransformerCostFunction(StitchCostFunction):
                                         device=self.device, dtype=torch.float32)
 
         print(f"[TransformerCostFunction] Loaded model from {checkpoint_path}")
+        self._initialize_calibration()
 
     def _resolve_path(self, path: str) -> str:
         if path is None:
@@ -746,6 +773,93 @@ class TransformerCostFunction(StitchCostFunction):
         if resolved.exists():
             return str(resolved)
         return path
+
+    def _default_calibration_path(self) -> str:
+        project_root = Path(__file__).parent.parent
+        return str(project_root / "models" / "outputs" / "transformer_calibration.json")
+
+    def _initialize_calibration(self):
+        if self.calibration_mode == "linear":
+            return
+
+        path = self.calibration_path or self._default_calibration_path()
+        resolved_path = self._resolve_path(path)
+        calibration = self._load_calibration_artifact(resolved_path)
+        if calibration is None:
+            print(
+                f"[TransformerCostFunction] Calibration mode '{self.calibration_mode}' requested but "
+                f"artifact unavailable at {resolved_path}. Falling back to linear mapping."
+            )
+            self.calibration_mode = "linear"
+            return
+
+        self.calibration = calibration
+        print(
+            f"[TransformerCostFunction] Loaded calibration mode='{self.calibration_mode}' "
+            f"from {resolved_path}"
+        )
+
+        fit_params = calibration.get("fit_params", {})
+        fit_scale = fit_params.get("scale_factor", None)
+        fit_time_penalty = fit_params.get("time_penalty", None)
+        if fit_scale is not None and abs(float(fit_scale) - float(self.scale_factor)) > 1e-6:
+            print(
+                f"[TransformerCostFunction] Warning: checkpoint runtime scale_factor={self.scale_factor} "
+                f"differs from calibration fit scale_factor={fit_scale}."
+            )
+        if fit_time_penalty is not None and abs(float(fit_time_penalty) - float(self.time_penalty)) > 1e-6:
+            print(
+                f"[TransformerCostFunction] Warning: runtime time_penalty={self.time_penalty} "
+                f"differs from calibration fit time_penalty={fit_time_penalty}."
+            )
+
+    def _load_calibration_artifact(self, path: str):
+        try:
+            if path is None or not Path(path).exists():
+                return None
+
+            with open(path, "r") as f:
+                artifact = json.load(f)
+
+            x_knots = self.np.asarray(artifact.get("x_knots", []), dtype=self.np.float64)
+            y_knots = self.np.asarray(artifact.get("y_knots", []), dtype=self.np.float64)
+            if len(x_knots) < 2 or len(y_knots) != len(x_knots):
+                raise ValueError("Calibration artifact must contain matching x_knots/y_knots with >=2 points.")
+
+            order = self.np.argsort(x_knots)
+            x_knots = x_knots[order]
+            y_knots = y_knots[order]
+
+            x_knots, unique_idx = self.np.unique(x_knots, return_index=True)
+            y_knots = y_knots[unique_idx]
+            if len(x_knots) < 2:
+                raise ValueError("Calibration x_knots are not sufficiently distinct.")
+
+            domain = artifact.get("domain", [float(x_knots[0]), float(x_knots[-1])])
+            if not isinstance(domain, (list, tuple)) or len(domain) != 2:
+                domain = [float(x_knots[0]), float(x_knots[-1])]
+            domain = [float(domain[0]), float(domain[1])]
+            if domain[0] >= domain[1]:
+                domain = [float(x_knots[0]), float(x_knots[-1])]
+
+            artifact["x_knots"] = x_knots
+            artifact["y_knots"] = y_knots
+            artifact["domain"] = domain
+            return artifact
+        except Exception as exc:
+            print(f"[TransformerCostFunction] Failed to load calibration artifact '{path}': {exc}")
+            return None
+
+    def _apply_calibration(self, raw_base_cost: float) -> float:
+        if self.calibration_mode == "linear" or self.calibration is None:
+            return float(raw_base_cost)
+
+        x_knots = self.calibration["x_knots"]
+        y_knots = self.calibration["y_knots"]
+        domain_min, domain_max = self.calibration["domain"]
+        clipped = float(self.np.clip(raw_base_cost, domain_min, domain_max))
+        calibrated = self.np.interp(clipped, x_knots, y_knots)
+        return float(calibrated)
 
     def compute_cost(self, track1: dict, track2: dict,
                     TIME_WIN: float, param: dict) -> float:
@@ -777,7 +891,8 @@ class TransformerCostFunction(StitchCostFunction):
             with torch.no_grad():
                 similarity = self.model(seq_a_t, mask_a, seq_b_t, mask_b, endpoint_t).item()
 
-            base_cost = (1.0 - similarity) * self.scale_factor
+            raw_base_cost = (1.0 - similarity) * self.scale_factor
+            base_cost = self._apply_calibration(raw_base_cost)
             time_cost = self.time_penalty * gap
             return float(base_cost + time_cost)
 
@@ -917,9 +1032,11 @@ class CostFunctionFactory:
             checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
             return TransformerCostFunction(
                 checkpoint_path=checkpoint_path,
-                device=config.get('device', 'cpu'),
+                device=config.get('device', None),
                 scale_factor=config.get('scale_factor', 5.0),
                 time_penalty=config.get('time_penalty', 0.1),
+                calibration_mode=config.get('calibration_mode', 'isotonic'),
+                calibration_path=config.get('calibration_path', None),
             )
 
         else:

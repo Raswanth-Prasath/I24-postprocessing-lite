@@ -16,6 +16,7 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score, StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import RFE
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import roc_auc_score, average_precision_score
@@ -161,15 +162,16 @@ def permutation_importance_analysis(X, y, feature_names):
     print("PERMUTATION IMPORTANCE ANALYSIS")
     print("=" * 70)
 
-    # Scale and split
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Split raw features first; scaling is done inside a pipeline.
     X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, random_state=42, stratify=y
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # Fit model
-    lr = LogisticRegression(max_iter=1000, solver='lbfgs', C=1.0)
+    # Fit leakage-safe pipeline
+    lr = Pipeline([
+        ('scaler', StandardScaler()),
+        ('lr', LogisticRegression(max_iter=1000, solver='lbfgs', C=1.0)),
+    ])
     lr.fit(X_train, y_train)
 
     # Calculate permutation importance
@@ -286,19 +288,18 @@ def evaluate_feature_subset(X, y, feature_names, selected_features, subset_name)
     indices = [feature_names.index(f) for f in selected_features if f in feature_names]
     X_subset = X[:, indices]
 
-    # Scale
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_subset)
-
-    # Split for test evaluation
+    # Split raw features for test evaluation; scaling is fit only on train.
     X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, random_state=42, stratify=y
+        X_subset, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # Cross-validation
-    lr = LogisticRegression(max_iter=1000, solver='lbfgs', C=1.0)
+    # Leakage-safe model for split evaluation and CV.
+    lr = Pipeline([
+        ('scaler', StandardScaler()),
+        ('lr', LogisticRegression(max_iter=1000, solver='lbfgs', C=1.0)),
+    ])
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_scores = cross_val_score(lr, X_scaled, y, cv=cv, scoring='roc_auc')
+    cv_scores = cross_val_score(lr, X_subset, y, cv=cv, scoring='roc_auc')
 
     # Test set evaluation
     lr.fit(X_train, y_train)
@@ -451,22 +452,21 @@ def train_optimal_model(X, y, feature_names, optimal_features, output_name):
     indices = [feature_names.index(f) for f in optimal_features if f in feature_names]
     X_subset = X[:, indices]
 
-    # Scale
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_subset)
-
-    # Split
+    # Split raw features for leakage-safe evaluation.
     X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, random_state=42, stratify=y
+        X_subset, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # Train final model
-    lr = LogisticRegression(max_iter=1000, solver='lbfgs', C=1.0)
-    lr.fit(X_train, y_train)
+    # Train evaluation model (scaler fit on train split only).
+    eval_pipe = Pipeline([
+        ('scaler', StandardScaler()),
+        ('lr', LogisticRegression(max_iter=1000, solver='lbfgs', C=1.0)),
+    ])
+    eval_pipe.fit(X_train, y_train)
 
     # Evaluate
-    y_proba_train = lr.predict_proba(X_train)[:, 1]
-    y_proba_test = lr.predict_proba(X_test)[:, 1]
+    y_proba_train = eval_pipe.predict_proba(X_train)[:, 1]
+    y_proba_test = eval_pipe.predict_proba(X_test)[:, 1]
 
     train_roc = roc_auc_score(y_train, y_proba_train)
     test_roc = roc_auc_score(y_test, y_proba_test)
@@ -475,7 +475,7 @@ def train_optimal_model(X, y, feature_names, optimal_features, output_name):
 
     # Cross-validation
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_scores = cross_val_score(lr, X_scaled, y, cv=cv, scoring='roc_auc')
+    cv_scores = cross_val_score(eval_pipe, X_subset, y, cv=cv, scoring='roc_auc')
 
     print(f"\nModel trained with {len(optimal_features)} features:")
     print(f"  Features: {optimal_features}")

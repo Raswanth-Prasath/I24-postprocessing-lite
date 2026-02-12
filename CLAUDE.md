@@ -1,7 +1,7 @@
 # Deep Learning Improvements for I24-Postprocessing-Lite Pipeline
 
 ## Overview
-Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with learned models, compare multiple architectures, and integrate the best model into the pipeline.
+Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with learned models, compare multiple architectures, and integrate the best model into the pipeline. Get updates from AGENTS.md and CLAUDE.md.
 
 **Environment**: Run in `i24` conda environment (`source activate i24`)
 
@@ -119,7 +119,8 @@ I24-postprocessing-lite/
 │   └── misc.py                # Helper functions (496 lines)
 │
 ├── Core Pipeline Files
-│   ├── pp_lite.py             # Main orchestrator (208 lines)
+│   ├── pp_lite.py             # Main orchestrator with --config/--tag CLI (230 lines)
+│   ├── run_experiments.py     # Batch experiment runner (130 lines)
 │   ├── merge.py               # Fragment merging (481 lines)
 │   ├── min_cost_flow.py       # Stitch stage (142 lines)
 │   ├── reconciliation.py      # Trajectory smoothing (223 lines)
@@ -130,7 +131,13 @@ I24-postprocessing-lite/
 │   └── diagnose_json.py       # JSON diagnostic/fix utility
 │
 ├── Configuration
-│   └── parameters.json        # Pipeline config with cost_function section
+│   ├── parameters.json        # Pipeline config with cost_function section
+│   ├── parameters_Bhat.json   # Bhattacharyya config
+│   ├── parameters_LR.json     # Logistic Regression config
+│   ├── parameters_SNN.json    # Siamese Neural Network config
+│   ├── parameters_MLP.json    # MLP config
+│   ├── parameters_TCN.json    # TCN config
+│   └── parameters_Transformer.json  # Transformer config
 │
 └── Data Files (204 MB total)
     ├── GT_i.json, GT_ii.json, GT_iii.json        # Ground truth
@@ -484,9 +491,36 @@ conda activate i24
 
 ### Run Full Pipeline
 ```bash
-python pp_lite.py i      # Scenario i (free-flow)
+python pp_lite.py i      # Scenario i (free-flow), uses parameters.json
 python pp_lite.py ii     # Scenario ii (snowy)
 python pp_lite.py iii    # Scenario iii (congested)
+
+# With a specific config file
+python pp_lite.py i --config parameters_LR.json
+
+# With config + auto-tagged output (-> REC_i_LR.json)
+python pp_lite.py i --config parameters_LR.json --tag LR
+```
+
+### Batch Experiments (run_experiments.py)
+```bash
+# Single model, single scenario
+python run_experiments.py --config parameters_LR.json --suffix i
+
+# One model, all scenarios
+python run_experiments.py --config parameters_LR.json --all-suffixes
+
+# All models, one scenario
+python run_experiments.py --all-configs --suffix i
+
+# Full matrix (6 models x 3 scenarios = 18 runs)
+python run_experiments.py --all-configs --all-suffixes
+
+# Preview without running
+python run_experiments.py --all-configs --all-suffixes --dry-run
+
+# Run + evaluate with hota_trackeval.py
+python run_experiments.py --all-configs --suffix i --evaluate
 ```
 
 ### MOT Evaluation
@@ -509,24 +543,14 @@ python evaluate_siamese.py
 ```
 
 ### Quick Test (single cost function)
-1. Edit `parameters.json` to set desired `cost_function`
-2. Run `python pp_lite.py i`
-3. If JSON issues, run: `python diagnose_json.py REC_i.json --fix`
-4. Run `python mot_i24.py i`
+1. Run `python pp_lite.py i --config parameters_LR.json --tag LR`
+2. If JSON issues, run: `python diagnose_json.py REC_i_LR.json --fix`
+3. Run `python mot_i24.py i`
 
 ### Diagnose/Fix JSON Issues
 ```bash
 python diagnose_json.py REC_i.json          # Diagnose only
 python diagnose_json.py REC_i.json --fix    # Auto-fix common issues
-```
-
-### Run All Scenarios (Batch Commands)
-```bash
-# Run full pipeline on all three scenarios
-for s in i ii iii; do echo "=== Scenario $s ==="; python pp_lite.py "$s"; done
-
-# Evaluate MOT metrics on all three scenarios
-for s in i ii iii; do echo "=== MOT $s ==="; python mot_i24.py "$s"; done
 ```
 
 ---

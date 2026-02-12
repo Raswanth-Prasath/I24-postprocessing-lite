@@ -83,16 +83,17 @@ class TrajectoryEncoder(nn.Module):
         # LSTM forward pass
         packed_output, (hidden, cell) = self.lstm(packed_sequences)
 
-        # Extract final hidden state
-        if self.bidirectional:
-            # Concatenate forward and backward final hidden states
-            # hidden shape: (num_layers * num_directions, batch, hidden_size)
-            forward_hidden = hidden[-2, :, :]  # Last layer, forward direction
-            backward_hidden = hidden[-1, :, :]  # Last layer, backward direction
-            embedding = torch.cat([forward_hidden, backward_hidden], dim=1)
-        else:
-            # Use last layer hidden state
-            embedding = hidden[-1, :, :]
+        # 1. Global Average Pooling over LSTM outputs (Recommended for trajectory behavior)
+        # Unpack the sequences back to (batch, max_seq_len, hidden_size * num_directions)
+        output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
+        
+        # Create mask for valid timesteps
+        mask = torch.arange(output.size(1)).expand(output.size(0), output.size(1)).to(output.device)
+        mask = mask < lengths.unsqueeze(1)
+        mask = mask.unsqueeze(-1).float()
+        
+        # Average pooling with mask
+        embedding = (output * mask).sum(dim=1) / lengths.unsqueeze(1).float()
 
         # Apply layer normalization
         embedding = self.layer_norm(embedding)
@@ -106,10 +107,11 @@ class SiameseTrajectoryNetwork(nn.Module):
 
     Architecture:
     1. Twin LSTM encoders (shared weights) process each fragment
-    2. Similarity head computes probability of same vehicle
+    2. Symmetric feature combination (abs diff and product)
+    3. Similarity head computes probability of same vehicle
 
     Enhanced version accepts endpoint features (time_gap, x_gap, y_gap, velocity_diff)
-    that are concatenated with the LSTM embeddings before the similarity head.
+    that are concatenated with the symmetric features before the similarity head.
     """
 
     def __init__(self,
@@ -148,8 +150,8 @@ class SiameseTrajectoryNetwork(nn.Module):
 
         embedding_size = self.encoder.output_size
 
-        # Compute combined input size for similarity head
-        # embeddings from both tracks + endpoint features
+        # Symmetric features: |a - b| and (a * b)
+        # Each has the same dimension as the embedding
         if use_endpoint_features:
             combined_size = embedding_size * 2 + endpoint_feature_dim
         else:
@@ -206,11 +208,15 @@ class SiameseTrajectoryNetwork(nn.Module):
         emb_a = self.encoder(seq_a, len_a)
         emb_b = self.encoder(seq_b, len_b)
 
-        # Concatenate embeddings with optional endpoint features
+        # 2. Symmetric feature combination (Ensures S(A,B) = S(B,A))
+        diff = torch.abs(emb_a - emb_b)
+        prod = emb_a * emb_b
+        
+        # Concatenate symmetric features with optional endpoint features
         if self.use_endpoint_features and endpoint_features is not None:
-            combined = torch.cat([emb_a, emb_b, endpoint_features], dim=1)
+            combined = torch.cat([diff, prod, endpoint_features], dim=1)
         else:
-            combined = torch.cat([emb_a, emb_b], dim=1)
+            combined = torch.cat([diff, prod], dim=1)
 
         # Compute similarity score
         similarity = self.similarity_head(combined)
@@ -265,15 +271,16 @@ class CombinedLoss(nn.Module):
     """
     Combined loss: Binary Cross-Entropy + Contrastive Loss
 
-    BCE loss trains the similarity head directly
-    Contrastive loss shapes the embedding space
+    BCE loss trains the similarity head directly (Primary for inference)
+    Contrastive loss shapes the embedding space (Secondary regularization)
     """
 
-    def __init__(self, margin: float = 2.0, alpha: float = 0.5):
+    def __init__(self, margin: float = 2.0, alpha: float = 0.1):
         """
         Args:
             margin: Margin for contrastive loss
-            alpha: Weight for contrastive loss (1-alpha for BCE)
+            alpha: Weight for contrastive loss (1-alpha for BCE). 
+                   Set alpha=0 to use BCE only.
         """
         super(CombinedLoss, self).__init__()
         self.contrastive_loss = ContrastiveLoss(margin=margin)
@@ -341,10 +348,11 @@ if __name__ == "__main__":
     len_a = torch.LongTensor([seq_len_a] * batch_size)
     seq_b = torch.randn(batch_size, seq_len_b, input_size)
     len_b = torch.LongTensor([seq_len_b] * batch_size)
+    endpoint_features = torch.randn(batch_size, 4)
     labels = torch.randint(0, 2, (batch_size, 1)).float()
 
     # Forward pass
-    similarity, emb_a, emb_b = model(seq_a, len_a, seq_b, len_b)
+    similarity, emb_a, emb_b = model(seq_a, len_a, seq_b, len_b, endpoint_features)
 
     print(f"\nForward pass test:")
     print(f"  Input A shape: {seq_a.shape}")

@@ -1,0 +1,170 @@
+{
+  "dataset": "Logistic Regression/training_dataset_v4.npz",
+  "model_path": "Logistic Regression/model_artifacts/consensus_top10_full47.pkl",
+  "n_samples": 8274,
+  "n_features_full": 47,
+  "n_features_model": 10,
+  "influence_method": "manual",
+  "thresholds": {
+    "classification_threshold": 0.5,
+    "cook_threshold": 0.00048344210780759005,
+    "leverage_threshold": 0.0026589315929417454,
+    "std_residual_threshold": 3.0
+  },
+  "metrics_oof": {
+    "threshold": 0.5,
+    "roc_auc": 0.9979714596206353,
+    "pr_auc": 0.9966619231982758,
+    "log_loss": 0.04779925858879069,
+    "brier_score": 0.010611450304174647,
+    "precision": 0.9756155303030303,
+    "recall": 0.9961324631375392,
+    "specificity": 0.9751027314479092,
+    "f1": 0.9857672527209664,
+    "tp": 4121,
+    "tn": 4034,
+    "fp": 103,
+    "fn": 16,
+    "ece": 0.019873433774164367
+  },
+  "calibration_bins": [
+    {
+      "bin": 0,
+      "count": 3882,
+      "pred_mean": 0.0029676892675884344,
+      "obs_rate": 0.0015455950540958269,
+      "abs_gap": 0.0014220942134926075
+    },
+    {
+      "bin": 1,
+      "count": 78,
+      "pred_mean": 0.14268789275688815,
+      "obs_rate": 0.02564102564102564,
+      "abs_gap": 0.11704686711586251
+    },
+    {
+      "bin": 2,
+      "count": 36,
+      "pred_mean": 0.2445164833103982,
+      "obs_rate": 0.1111111111111111,
+      "abs_gap": 0.1334053721992871
+    },
+    {
+      "bin": 3,
+      "count": 28,
+      "pred_mean": 0.3399034141380253,
+      "obs_rate": 0.03571428571428571,
+      "abs_gap": 0.3041891284237396
+    },
+    {
+      "bin": 4,
+      "count": 26,
+      "pred_mean": 0.45194420029013826,
+      "obs_rate": 0.11538461538461539,
+      "abs_gap": 0.33655958490552285
+    },
+    {
+      "bin": 5,
+      "count": 31,
+      "pred_mean": 0.555398647195066,
+      "obs_rate": 0.12903225806451613,
+      "abs_gap": 0.4263663891305499
+    },
+    {
+      "bin": 6,
+      "count": 29,
+      "pred_mean": 0.6563366810535011,
+      "obs_rate": 0.20689655172413793,
+      "abs_gap": 0.44944012932936317
+    },
+    {
+      "bin": 7,
+      "count": 28,
+      "pred_mean": 0.7532671641220986,
+      "obs_rate": 0.42857142857142855,
+      "abs_gap": 0.32469573555067005
+    },
+    {
+      "bin": 8,
+      "count": 75,
+      "pred_mean": 0.8754050154363059,
+      "obs_rate": 0.7466666666666667,
+      "abs_gap": 0.1287383487696392
+    },
+    {
+      "bin": 9,
+      "count": 4061,
+      "pred_mean": 0.9751996678388827,
+      "obs_rate": 0.9955675941886235,
+      "abs_gap": 0.020367926349740828
+    }
+  ],
+  "influence_summary": {
+    "cook_flag_count": 250,
+    "leverage_flag_count": 106,
+    "residual_flag_count": 190,
+    "influential_count": 250
+  },
+  "shortcut_risk_top_features": [
+    {
+      "feature": "projection_error_x_max",
+      "abs_corr": 0.6818257697050297,
+      "ks": 0.9250664732898235,
+      "risk_score": 0.8034461214974267
+    },
+    {
+      "feature": "width_diff",
+      "abs_corr": 0.5196015290293928,
+      "ks": 0.902102973168963,
+      "risk_score": 0.7108522510991779
+    },
+    {
+      "feature": "height_diff",
+      "abs_corr": 0.44748237873165275,
+      "ks": 0.8774474256707759,
+      "risk_score": 0.6624649022012143
+    },
+    {
+      "feature": "length_diff",
+      "abs_corr": 0.356237810013558,
+      "ks": 0.8897751994198695,
+      "risk_score": 0.6230065047167137
+    },
+    {
+      "feature": "bhattacharyya_coeff",
+      "abs_corr": 0.5142498748393663,
+      "ks": 0.6091370558375634,
+      "risk_score": 0.5616934653384649
+    },
+    {
+      "feature": "bhattacharyya_distance",
+      "abs_corr": 0.3624602403280808,
+      "ks": 0.6091370558375635,
+      "risk_score": 0.48579864808282214
+    },
+    {
+      "feature": "time_gap",
+      "abs_corr": 0.2884623263695878,
+      "ks": 0.48344210780759006,
+      "risk_score": 0.38595221708858896
+    },
+    {
+      "feature": "projection_error_x_mean",
+      "abs_corr": 0.06310637620966106,
+      "ks": 0.5313028764805414,
+      "risk_score": 0.29720462634510125
+    },
+    {
+      "feature": "projection_error_x_std",
+      "abs_corr": 0.24911896355227886,
+      "ks": 0.25380710659898476,
+      "risk_score": 0.25146303507563184
+    },
+    {
+      "feature": "velocity_mismatch_x",
+      "abs_corr": 0.2377733748092135,
+      "ks": 0.21102248005801305,
+      "risk_score": 0.22439792743361328
+    }
+  ]
+}

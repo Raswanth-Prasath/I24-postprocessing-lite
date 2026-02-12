@@ -4,7 +4,7 @@ Siamese Transformer for Trajectory Fragment Stitching
 Architecture:
   Input: (batch, seq_len, 8) raw features
   -> Linear projection (8 -> 64)
-  -> Sinusoidal positional encoding
+  -> Sinusoidal positional encoding + learned time-aware bias (from t_norm)
   -> TransformerEncoder (2 layers, 4 heads, d_ff=128)
   -> Masked mean pooling -> 64-dim embedding
   -> Similarity head with |emb_a - emb_b| + endpoint features -> probability
@@ -15,7 +15,6 @@ Architecture:
 import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from typing import Optional
 
 
@@ -43,11 +42,45 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
+class TimeAwarePositionalBias(nn.Module):
+    """
+    Projects continuous time feature (t_norm) into embedding space.
+    """
+
+    def __init__(self, d_model: int):
+        super().__init__()
+        self.proj = nn.Sequential(
+            nn.Linear(1, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, d_model),
+        )
+        self._init_legacy_safe()
+
+    def _init_legacy_safe(self):
+        """
+        Keep initial output near zero so checkpoints trained before this module
+        (without time_bias weights) retain behavior after non-strict loading.
+        """
+        last = self.proj[2]
+        nn.init.zeros_(last.weight)
+        nn.init.zeros_(last.bias)
+
+    def forward(self, t_norm: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            t_norm: (batch, seq_len, 1)
+        Returns:
+            (batch, seq_len, d_model) additive bias
+        """
+        return self.proj(t_norm)
+
+
 class TransformerTrajectoryEncoder(nn.Module):
     """
     Transformer encoder for variable-length trajectory sequences.
 
-    Linear(8, 64) -> PositionalEncoding -> TransformerEncoder -> masked mean pool
+    Linear(8, 64) -> PositionalEncoding + TimeAwarePositionalBias
+    -> TransformerEncoder -> masked mean pool
     """
 
     def __init__(self, input_size: int = 8, d_model: int = 64, nhead: int = 4,
@@ -55,8 +88,11 @@ class TransformerTrajectoryEncoder(nn.Module):
         super().__init__()
 
         self.d_model = d_model
+        self.input_size = input_size
+        self.time_feature_index = input_size - 1  # t_norm is final feature in rich sequence
         self.input_projection = nn.Linear(input_size, d_model)
         self.pos_encoding = PositionalEncoding(d_model, dropout=dropout)
+        self.time_bias = TimeAwarePositionalBias(d_model)
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -69,6 +105,79 @@ class TransformerTrajectoryEncoder(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
         self.output_size = d_model  # 64
 
+    def _encode_input_tokens(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Encode raw input features into transformer token representations.
+        """
+        if x.size(-1) <= self.time_feature_index:
+            raise ValueError(
+                f"Expected at least {self.time_feature_index + 1} features per token, "
+                f"got {x.size(-1)}."
+            )
+
+        # Extract time feature before projection so time bias is learned from raw t_norm.
+        t_norm = x[:, :, self.time_feature_index:self.time_feature_index + 1]
+
+        x = self.input_projection(x)
+        x = self.pos_encoding(x)
+        x = x + self.time_bias(t_norm)
+        return x
+
+    def _masked_mean_pool(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]) -> torch.Tensor:
+        """
+        Mean pool over valid timesteps only.
+        """
+        if padding_mask is not None:
+            valid_mask = ~padding_mask
+            valid_mask_expanded = valid_mask.unsqueeze(-1).float()
+            x_masked = x * valid_mask_expanded
+            lengths = valid_mask.sum(dim=1, keepdim=True).float().clamp(min=1)
+            pooled = x_masked.sum(dim=1) / lengths
+        else:
+            pooled = x.mean(dim=1)
+        return pooled
+
+    def _forward_layer_with_attention(
+        self,
+        layer: nn.TransformerEncoderLayer,
+        x: torch.Tensor,
+        padding_mask: Optional[torch.Tensor],
+    ):
+        """
+        Manual encoder layer forward used only for attention extraction.
+        """
+        if layer.norm_first:
+            y = layer.norm1(x)
+            attn_out, attn_weights = layer.self_attn(
+                y,
+                y,
+                y,
+                attn_mask=None,
+                key_padding_mask=padding_mask,
+                need_weights=True,
+                average_attn_weights=False,
+            )
+            x = x + layer.dropout1(attn_out)
+
+            y = layer.norm2(x)
+            ff_out = layer.linear2(layer.dropout(layer.activation(layer.linear1(y))))
+            x = x + layer.dropout2(ff_out)
+        else:
+            attn_out, attn_weights = layer.self_attn(
+                x,
+                x,
+                x,
+                attn_mask=None,
+                key_padding_mask=padding_mask,
+                need_weights=True,
+                average_attn_weights=False,
+            )
+            x = layer.norm1(x + layer.dropout1(attn_out))
+            ff_out = layer.linear2(layer.dropout(layer.activation(layer.linear1(x))))
+            x = layer.norm2(x + layer.dropout2(ff_out))
+
+        return x, attn_weights
+
     def forward(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Args:
@@ -77,22 +186,51 @@ class TransformerTrajectoryEncoder(nn.Module):
         Returns:
             (batch, d_model) embedding via masked mean pooling
         """
-        x = self.input_projection(x)
-        x = self.pos_encoding(x)
+        x = self._encode_input_tokens(x)
         x = self.transformer(x, src_key_padding_mask=padding_mask)
-
-        # Masked mean pooling
-        if padding_mask is not None:
-            # Invert mask: True -> valid positions
-            valid_mask = ~padding_mask  # (batch, seq_len)
-            valid_mask_expanded = valid_mask.unsqueeze(-1).float()  # (batch, seq_len, 1)
-            x_masked = x * valid_mask_expanded
-            lengths = valid_mask.sum(dim=1, keepdim=True).float().clamp(min=1)  # (batch, 1)
-            pooled = x_masked.sum(dim=1) / lengths  # (batch, d_model)
-        else:
-            pooled = x.mean(dim=1)
-
+        pooled = self._masked_mean_pool(x, padding_mask)
         return self.layer_norm(pooled)
+
+    def encode_with_attention(
+        self,
+        x: torch.Tensor,
+        padding_mask: Optional[torch.Tensor] = None,
+        layer_index: int = -1,
+        average_heads: bool = True,
+    ):
+        """
+        Eval-oriented encoder path that also returns self-attention maps.
+
+        Returns:
+            embedding: (batch, d_model)
+            attention: (batch, seq_len, seq_len) if averaged heads,
+                       else (batch, heads, seq_len, seq_len)
+        """
+        x = self._encode_input_tokens(x)
+        all_attn = []
+
+        for layer in self.transformer.layers:
+            x, attn = self._forward_layer_with_attention(layer, x, padding_mask)
+            all_attn.append(attn)
+
+        if self.transformer.norm is not None:
+            x = self.transformer.norm(x)
+
+        pooled = self._masked_mean_pool(x, padding_mask)
+        embedding = self.layer_norm(pooled)
+
+        if not all_attn:
+            return embedding, None
+
+        if layer_index < 0:
+            layer_index = len(all_attn) + layer_index
+        layer_index = max(0, min(layer_index, len(all_attn) - 1))
+
+        attn = all_attn[layer_index]
+        if average_heads and attn is not None and attn.dim() == 4:
+            attn = attn.mean(dim=1)
+
+        return embedding, attn
 
 
 class SiameseTransformerNetwork(nn.Module):
@@ -153,6 +291,19 @@ class SiameseTransformerNetwork(nn.Module):
         """Get embeddings without computing similarity (for contrastive loss)."""
         return self.encoder(seq_a, mask_a), self.encoder(seq_b, mask_b)
 
+    def get_attention_maps(self, seq_a, mask_a, seq_b, mask_b,
+                           layer_index: int = -1, average_heads: bool = True):
+        """
+        Return attention maps for both branches.
+        """
+        _, attn_a = self.encoder.encode_with_attention(
+            seq_a, mask_a, layer_index=layer_index, average_heads=average_heads
+        )
+        _, attn_b = self.encoder.encode_with_attention(
+            seq_b, mask_b, layer_index=layer_index, average_heads=average_heads
+        )
+        return attn_a, attn_b
+
 
 if __name__ == "__main__":
     model = SiameseTransformerNetwork()
@@ -171,3 +322,7 @@ if __name__ == "__main__":
     out = model(seq_a, mask_a, seq_b, mask_b, ep)
     print(f"Input: A={seq_a.shape}, B={seq_b.shape} -> Output: {out.shape}")
     print(f"Output: {out.squeeze().detach()}")
+
+    _, attn_a = model.encoder.encode_with_attention(seq_a, mask_a)
+    if attn_a is not None:
+        print(f"Attention map shape (A): {attn_a.shape}")

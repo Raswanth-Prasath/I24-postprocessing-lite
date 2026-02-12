@@ -1,0 +1,203 @@
+{
+  "paths": {
+    "advanced_dataset": "Logistic Regression/training_dataset_advanced.npz",
+    "v4_dataset": "Logistic Regression/training_dataset_v4.npz",
+    "model_path": "Logistic Regression/model_artifacts/consensus_top10_full47.pkl",
+    "output_dataset": "/home/raswanth/I24/I24-postprocessing-lite/Logistic Regression/data/training_dataset_v5_diverse.npz"
+  },
+  "params": {
+    "seed": 42,
+    "target_v4_per_class": 2100,
+    "hard_ratio": 0.6,
+    "medium_ratio": 0.3,
+    "easy_ratio": 0.1,
+    "hard_quantile": 0.25,
+    "medium_quantile": 0.6,
+    "n_bins": 8
+  },
+  "input_stats": {
+    "advanced": {
+      "n": 2100,
+      "pos": 1050,
+      "neg": 1050
+    },
+    "v4": {
+      "n": 8274,
+      "pos": 4137,
+      "neg": 4137,
+      "hard_count": 2070,
+      "medium_count": 2894,
+      "easy_count": 3310
+    }
+  },
+  "selected_v4_stats": {
+    "n": 4200,
+    "pos": 2100,
+    "neg": 2100,
+    "hard": 2070,
+    "medium": 1279,
+    "easy": 851,
+    "misclassified_fraction": 0.12595238095238095,
+    "margin_mean": 0.43776330065229774,
+    "margin_std": 0.11274316102754159
+  },
+  "output_stats": {
+    "n": 6300,
+    "pos": 3150,
+    "neg": 3150,
+    "feature_count": 47,
+    "is_balanced": true
+  },
+  "top_single_feature_auc": {
+    "advanced": [
+      {
+        "feature": "projection_error_x_max",
+        "single_feature_auc": 0.9591619047619048
+      },
+      {
+        "feature": "bhattacharyya_distance",
+        "single_feature_auc": 0.9471809523809523
+      },
+      {
+        "feature": "bhattacharyya_coeff",
+        "single_feature_auc": 0.9330480725623583
+      },
+      {
+        "feature": "y_diff",
+        "single_feature_auc": 0.9266258503401361
+      },
+      {
+        "feature": "projection_error_y_max",
+        "single_feature_auc": 0.9194476190476191
+      },
+      {
+        "feature": "length_diff",
+        "single_feature_auc": 0.7956888888888889
+      },
+      {
+        "feature": "width_diff",
+        "single_feature_auc": 0.7488997732426304
+      },
+      {
+        "feature": "projection_error_x_std",
+        "single_feature_auc": 0.6865850340136055
+      },
+      {
+        "feature": "velocity_mismatch_x",
+        "single_feature_auc": 0.6819192743764173
+      },
+      {
+        "feature": "duration_a",
+        "single_feature_auc": 0.6521814058956916
+      },
+      {
+        "feature": "duration_ratio",
+        "single_feature_auc": 0.646479365079365
+      },
+      {
+        "feature": "height_diff",
+        "single_feature_auc": 0.6387492063492064
+      }
+    ],
+    "v4": [
+      {
+        "feature": "projection_error_x_max",
+        "single_feature_auc": 0.9900785689833149
+      },
+      {
+        "feature": "length_diff",
+        "single_feature_auc": 0.9729040456228185
+      },
+      {
+        "feature": "width_diff",
+        "single_feature_auc": 0.9673139614095873
+      },
+      {
+        "feature": "height_diff",
+        "single_feature_auc": 0.9662517793842266
+      },
+      {
+        "feature": "bhattacharyya_coeff",
+        "single_feature_auc": 0.8797224198585444
+      },
+      {
+        "feature": "bhattacharyya_distance",
+        "single_feature_auc": 0.8795119583559673
+      },
+      {
+        "feature": "time_gap",
+        "single_feature_auc": 0.6963787825590868
+      },
+      {
+        "feature": "projection_error_x_std",
+        "single_feature_auc": 0.6500285805785635
+      },
+      {
+        "feature": "projection_error_y_max",
+        "single_feature_auc": 0.632021939647564
+      },
+      {
+        "feature": "velocity_mismatch_x",
+        "single_feature_auc": 0.6316186622209158
+      },
+      {
+        "feature": "projection_error_x_mean",
+        "single_feature_auc": 0.5686037012827926
+      },
+      {
+        "feature": "y_diff",
+        "single_feature_auc": 0.5399918339534702
+      }
+    ],
+    "v5_diverse": [
+      {
+        "feature": "projection_error_x_max",
+        "single_feature_auc": 0.9765590325018897
+      },
+      {
+        "feature": "length_diff",
+        "single_feature_auc": 0.894069639707735
+      },
+      {
+        "feature": "height_diff",
+        "single_feature_auc": 0.8850455026455026
+      },
+      {
+        "feature": "width_diff",
+        "single_feature_auc": 0.8844916099773242
+      },
+      {
+        "feature": "bhattacharyya_distance",
+        "single_feature_auc": 0.8480959435626102
+      },
+      {
+        "feature": "bhattacharyya_coeff",
+        "single_feature_auc": 0.8461138825900731
+      },
+      {
+        "feature": "projection_error_y_max",
+        "single_feature_auc": 0.720833207357017
+      },
+      {
+        "feature": "y_diff",
+        "single_feature_auc": 0.6761128243890149
+      },
+      {
+        "feature": "projection_error_x_std",
+        "single_feature_auc": 0.6546467120181406
+      },
+      {
+        "feature": "velocity_mismatch_x",
+        "single_feature_auc": 0.6415694633408919
+      },
+      {
+        "feature": "time_gap",
+        "single_feature_auc": 0.5907165532879819
+      },
+      {
+        "feature": "projection_error_x_mean",
+        "single_feature_auc": 0.5583381204333585
+      }
+    ]
+  }
+}
