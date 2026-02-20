@@ -1,0 +1,79 @@
+{
+  "generated_at": "2026-02-19T16:36:50",
+  "scenarios": [
+    "i",
+    "ii",
+    "iii"
+  ],
+  "config": {
+    "min_group_size": 2,
+    "max_group_size": 80,
+    "seed": 42,
+    "val_ratio": 0.2,
+    "test_ratio": 0.0,
+    "min_valid_anchors": 200,
+    "min_mixed_gt_anchors": 80,
+    "storage_mode": "deduplicated_fragments"
+  },
+  "raw_summary_by_scenario": {
+    "i": {
+      "num_anchors": 740,
+      "num_rows": 36287,
+      "min_group_size": 1,
+      "max_group_size": 86,
+      "mean_group_size": 49.03648648648649,
+      "anchors_with_any_gt": 731,
+      "anchors_with_pos_and_neg_gt": 474
+    },
+    "ii": {
+      "num_anchors": 378,
+      "num_rows": 18537,
+      "min_group_size": 1,
+      "max_group_size": 77,
+      "mean_group_size": 49.03968253968254,
+      "anchors_with_any_gt": 367,
+      "anchors_with_pos_and_neg_gt": 297
+    },
+    "iii": {
+      "num_anchors": 1028,
+      "num_rows": 148231,
+      "min_group_size": 1,
+      "max_group_size": 277,
+      "mean_group_size": 144.19357976653697,
+      "anchors_with_any_gt": 1015,
+      "anchors_with_pos_and_neg_gt": 819
+    }
+  },
+  "pre_filter_summary": {
+    "num_anchors": 2146,
+    "num_rows": 203055,
+    "min_group_size": 1,
+    "max_group_size": 277,
+    "mean_group_size": 94.62022367194781,
+    "anchors_with_any_gt": 2113,
+    "anchors_with_pos_and_neg_gt": 1590
+  },
+  "post_filter_summary": {
+    "num_anchors": 1388,
+    "num_rows": 66093,
+    "min_group_size": 2,
+    "max_group_size": 80,
+    "mean_group_size": 47.61743515850144,
+    "anchors_with_any_gt": 1368,
+    "anchors_with_pos_and_neg_gt": 942
+  },
+  "anchor_split_counts": {
+    "train": 1106,
+    "val": 282,
+    "test": 0
+  },
+  "row_split_counts": {
+    "train": 52382,
+    "val": 13711,
+    "test": 0
+  },
+  "rows_written": 66093,
+  "unique_fragments": 2309,
+  "output_path": "/home/raswanth/I24/I24-postprocessing-lite/models/outputs/transformer_ranking_dataset.jsonl",
+  "fragments_path": "/home/raswanth/I24/I24-postprocessing-lite/models/outputs/transformer_ranking_dataset.fragments.jsonl"
+}

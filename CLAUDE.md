@@ -24,6 +24,19 @@ Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with lear
    - Evaluate both `REC_*.json` (Bhattacharyya) and `REC_*_LR.json` (Logistic Regression) variants
    - Report frame-level IDsw divided by number of GT objects
 
+9. **Optuna Compatibility/Safety**:
+   - `optuna_search_lr.py --keep-best` must support legacy trials missing `use_logit`/`logit_offset`.
+   - Optuna CSV outputs must never append into mismatched schemas; use versioned output on header drift.
+
+10. **Tagged Evaluation Coverage**:
+   - `run_experiments.py --evaluate` defaults to per-run evaluation via `--evaluate-granularity per-run`.
+   - `hota_trackeval.py` supports explicit `--gt-file --tracker-file --name` mode for each generated tagged output.
+
+11. **Leakage-Safe LR Diagnostics Policy**:
+   - Prefer split-before-scale protocol (`Pipeline(StandardScaler, LogisticRegression)`) for all validation metrics.
+   - Use `Logistic Regression/lr_diagnostics.py --eval-protocol {random,source_holdout,both}` for evidence.
+   - Diagnostics are flag-only: no automatic point dropping/reweighting in production by default.
+
 
 
 ---

@@ -231,7 +231,7 @@ def generate_negative_pairs(
     positive_pairs: List[Tuple[Dict, Dict, str, int]],
     time_window: float = 10.0,
     max_y_diff: float = 5.0,
-) -> List[Tuple[Dict, Dict]]:
+) -> List[Tuple[Dict, Dict, int]]:
     """Cross-pair before(V1) + after(V2), different vehicles, within time window."""
     groups = defaultdict(list)
     for frag_before, frag_after, gt_id, mask_idx in positive_pairs:
@@ -260,7 +260,7 @@ def generate_negative_pairs(
                 if y_diff > max_y_diff:
                     continue
 
-                negatives.append((before_i, after_j))
+                negatives.append((before_i, after_j, mask_idx))
 
     return negatives
 
@@ -270,20 +270,25 @@ def generate_negative_pairs(
 def extract_features(
     pairs: List[Tuple[Dict, Dict]],
     labels: List[int],
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    metadata: Optional[List[Dict]] = None,
+) -> Tuple[np.ndarray, np.ndarray, List[str], List[Dict]]:
     from utils.features_stitch import StitchFeatureExtractor
 
     extractor = StitchFeatureExtractor(mode='advanced')
     feature_names = extractor.get_feature_names()
-    X_list, y_list = [], []
+    X_list, y_list, meta_list = [], [], []
     skipped = 0
 
-    for (a, b), label in zip(pairs, labels):
+    if metadata is None:
+        metadata = [{} for _ in range(len(pairs))]
+
+    for (a, b), label, meta in zip(pairs, labels, metadata):
         try:
             vec = extractor.extract_feature_vector(a, b)
             vec = np.nan_to_num(vec, nan=0.0, posinf=1e6, neginf=-1e6)
             X_list.append(vec)
             y_list.append(label)
+            meta_list.append(meta)
         except Exception as e:
             skipped += 1
             if skipped <= 5:
@@ -292,7 +297,12 @@ def extract_features(
     if skipped > 5:
         print(f"  (total skipped: {skipped})")
 
-    return np.array(X_list, dtype=np.float32), np.array(y_list, dtype=np.int64), feature_names
+    return (
+        np.array(X_list, dtype=np.float32),
+        np.array(y_list, dtype=np.int64),
+        feature_names,
+        meta_list,
+    )
 
 
 # ── Diagnostics ──────────────────────────────────────────────────────
@@ -368,7 +378,7 @@ def generate_timespace(pos_pairs, neg_pairs, scenario, direction, output_path):
             return max(0, min(int((y_mean - 72) / LANE_WIDTH), N_LANES - 1))
 
     dir_pos = [(a, b) for a, b, _, _ in pos_pairs if a['direction'] == direction]
-    dir_neg = [(a, b) for a, b in neg_pairs if a['direction'] == direction]
+    dir_neg = [(entry[0], entry[1]) for entry in neg_pairs if entry[0]['direction'] == direction]
 
     if not dir_pos and not dir_neg:
         return
@@ -494,8 +504,14 @@ def main():
                 out.parent.mkdir(parents=True, exist_ok=True)
                 generate_timespace(pos, neg, scenario, direction, out)
 
-        all_base_pos.extend(pos)
-        all_base_neg.extend(neg)
+        all_base_pos.extend([
+            (frag_before, frag_after, gt_id, mask_idx, scenario)
+            for frag_before, frag_after, gt_id, mask_idx in pos
+        ])
+        all_base_neg.extend([
+            (frag_a, frag_b, mask_idx, scenario)
+            for frag_a, frag_b, mask_idx in neg
+        ])
 
     n_base_pos = len(all_base_pos)
     n_base_neg = len(all_base_neg)
@@ -529,6 +545,7 @@ def main():
 
     all_aug_pairs = []
     all_aug_labels = []
+    all_aug_meta = []
 
     for copy_idx in range(args.upscale):
         copy_rng = np.random.RandomState(args.seed + copy_idx + 1)
@@ -549,8 +566,14 @@ def main():
                                               max_y_diff=args.max_y_diff)
                 neg = generate_negative_pairs(pos, time_window=args.time_window,
                                               max_y_diff=args.max_y_diff)
-                copy_pos_all.extend(pos)
-                copy_neg_all.extend(neg)
+                copy_pos_all.extend([
+                    (frag_before, frag_after, gt_id, mask_idx, scenario)
+                    for frag_before, frag_after, gt_id, mask_idx in pos
+                ])
+                copy_neg_all.extend([
+                    (frag_a, frag_b, mask_idx, scenario)
+                    for frag_a, frag_b, mask_idx in neg
+                ])
 
             # Balance this copy
             n_copy = min(len(copy_pos_all), len(copy_neg_all))
@@ -574,18 +597,32 @@ def main():
               f"{len(copy_pos)} pos, {len(copy_neg)} neg")
 
         # Augment positive pairs
-        for frag_before, frag_after, gt_id, mask_idx in copy_pos:
+        for pair_idx, (frag_before, frag_after, gt_id, mask_idx, scenario) in enumerate(copy_pos):
             aug_a = augment_fragment(frag_before, copy_rng)
             aug_b = augment_fragment(frag_after, copy_rng)
             all_aug_pairs.append((aug_a, aug_b))
             all_aug_labels.append(1)
+            all_aug_meta.append({
+                'scenario': scenario,
+                'mask_idx': int(mask_idx),
+                'source_split_tag': f'{scenario}_v3_rebuild_copy{copy_idx}',
+                'pair_id': f'{scenario}:pos:{gt_id}:m{int(mask_idx)}:c{copy_idx}:i{pair_idx}',
+            })
 
         # Augment negative pairs
-        for frag_a, frag_b in copy_neg:
+        for pair_idx, (frag_a, frag_b, mask_idx, scenario) in enumerate(copy_neg):
             aug_a = augment_fragment(frag_a, copy_rng)
             aug_b = augment_fragment(frag_b, copy_rng)
             all_aug_pairs.append((aug_a, aug_b))
             all_aug_labels.append(0)
+            gt_a = get_gt_id(frag_a)
+            gt_b = get_gt_id(frag_b)
+            all_aug_meta.append({
+                'scenario': scenario,
+                'mask_idx': int(mask_idx),
+                'source_split_tag': f'{scenario}_v3_rebuild_copy{copy_idx}',
+                'pair_id': f'{scenario}:neg:{gt_a}->{gt_b}:m{int(mask_idx)}:c{copy_idx}:i{pair_idx}',
+            })
 
     print(f"\nTotal augmented: {len(all_aug_pairs)} pairs "
           f"({sum(1 for l in all_aug_labels if l==1)} pos, "
@@ -596,7 +633,7 @@ def main():
     print("PHASE 3: Extract 47 features per pair")
     print(f"{'='*50}")
 
-    X, y, feature_names = extract_features(all_aug_pairs, all_aug_labels)
+    X, y, feature_names, kept_meta = extract_features(all_aug_pairs, all_aug_labels, all_aug_meta)
 
     print(f"\nDataset shape: {X.shape}")
     print(f"Positives: {(y == 1).sum()}")
@@ -622,8 +659,20 @@ def main():
     if not output_path.is_absolute():
         output_path = LR_DIR / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(output_path, X=X, y=y,
-                        feature_names=np.array(feature_names))
+    scenario_arr = np.array([m.get('scenario', 'unknown') for m in kept_meta], dtype=object)
+    mask_idx_arr = np.array([m.get('mask_idx', -1) for m in kept_meta], dtype=np.int32)
+    source_split_tag_arr = np.array([m.get('source_split_tag', 'unknown') for m in kept_meta], dtype=object)
+    pair_id_arr = np.array([m.get('pair_id', f'pair_{i}') for i, m in enumerate(kept_meta)], dtype=object)
+    np.savez_compressed(
+        output_path,
+        X=X,
+        y=y,
+        feature_names=np.array(feature_names),
+        scenario=scenario_arr,
+        mask_idx=mask_idx_arr,
+        source_split_tag=source_split_tag_arr,
+        pair_id=pair_id_arr,
+    )
     print(f"\nSaved to: {output_path}")
     print(f"File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
 

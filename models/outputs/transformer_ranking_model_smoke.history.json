@@ -1,0 +1,32 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.10227668530578855,
+      "train_gt_term": 0.1121288007950481,
+      "train_soft_term": 0.06286821565565537,
+      "val_pairwise_acc_gt_crossclass": 0.8201892744479495,
+      "val_anchor_top1_acc": 0.765625,
+      "val_mean_anchor_spearman": 0.33439716312056744,
+      "lr": 0.0,
+      "semi_hard_selected": 0,
+      "hard_selected": 0,
+      "random_selected": 0,
+      "random_fallback_rate": 0.0
+    }
+  ],
+  "best": {
+    "epoch": 1,
+    "train_loss": 0.10227668530578855,
+    "train_gt_term": 0.1121288007950481,
+    "train_soft_term": 0.06286821565565537,
+    "val_pairwise_acc_gt_crossclass": 0.8201892744479495,
+    "val_anchor_top1_acc": 0.765625,
+    "val_mean_anchor_spearman": 0.33439716312056744,
+    "lr": 0.0,
+    "semi_hard_selected": 0,
+    "hard_selected": 0,
+    "random_selected": 0,
+    "random_fallback_rate": 0.0
+  }
+}

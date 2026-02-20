@@ -6,7 +6,9 @@ Allows switching between Bhattacharyya distance and learned Siamese network.
 """
 
 from abc import ABC, abstractmethod
+import atexit
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -644,7 +646,7 @@ class TCNCostFunction(StitchCostFunction):
         self.seq_mean = torch.as_tensor(ckpt.get('seq_mean', np.zeros(8)),
                                          device=self.device, dtype=torch.float32)
         self.seq_std = torch.as_tensor(ckpt.get('seq_std', np.ones(8)),
-                                        device=self.device, dtype=torch.float32)
+                                      device=self.device, dtype=torch.float32)
 
         print(f"[TCNCostFunction] Loaded model from {checkpoint_path}")
 
@@ -703,8 +705,13 @@ class TransformerCostFunction(StitchCostFunction):
 
     def __init__(self, checkpoint_path: str, device: str = None,
                  scale_factor: float = 5.0, time_penalty: float = 0.1,
-                 calibration_mode: str = "isotonic",
-                 calibration_path: str = None):
+                 calibration_mode: str = None,
+                 calibration_path: str = None,
+                 similarity_mapping: str = "linear",
+                 similarity_power: float = 1.0,
+                 similarity_clip_eps: float = 1e-2,
+                 training_objective: str = "classification",
+                 score_mapping: str = None):
         import torch
         import numpy as np
 
@@ -715,9 +722,60 @@ class TransformerCostFunction(StitchCostFunction):
         self.device = torch.device(device)
         self.scale_factor = scale_factor
         self.time_penalty = time_penalty
-        self.calibration_mode = (calibration_mode or "isotonic").lower()
+        self.invalid_cost_count = 0
+        self.calibration_applied_count = 0
+
+        self.training_objective = str(training_objective or "classification").lower()
+        if self.training_objective not in {"classification", "ranking"}:
+            print(
+                f"[TransformerCostFunction] Warning: unknown training_objective='{self.training_objective}'. "
+                "Falling back to 'classification'."
+            )
+            self.training_objective = "classification"
+
+        if score_mapping is None:
+            score_mapping = "direct_cost" if self.training_objective == "ranking" else "legacy_similarity"
+        self.score_mapping = str(score_mapping).lower()
+        if self.score_mapping not in {"legacy_similarity", "direct_cost"}:
+            print(
+                f"[TransformerCostFunction] Warning: unknown score_mapping='{self.score_mapping}'. "
+                "Falling back to objective-appropriate default."
+            )
+            self.score_mapping = "direct_cost" if self.training_objective == "ranking" else "legacy_similarity"
+        self.use_explicit_time_penalty = not (
+            self.training_objective == "ranking" and self.score_mapping == "direct_cost"
+        )
+        if not self.use_explicit_time_penalty:
+            print(
+                "[TransformerCostFunction] Info: skipping explicit time penalty for "
+                "ranking+direct_cost to avoid double-counting gap cost."
+            )
+
+        default_calibration_mode = "off" if self.training_objective == "ranking" else "isotonic"
+        self.calibration_mode = (calibration_mode or default_calibration_mode).lower()
         self.calibration_path = calibration_path
         self.calibration = None
+        self.similarity_mapping = str(similarity_mapping or "linear").lower()
+        if self.similarity_mapping not in {"linear", "odds", "power"}:
+            print(
+                f"[TransformerCostFunction] Warning: unknown similarity_mapping='{self.similarity_mapping}'. "
+                "Falling back to 'linear'."
+            )
+            self.similarity_mapping = "linear"
+        self.similarity_power = float(similarity_power)
+        if self.similarity_power <= 0:
+            print(
+                f"[TransformerCostFunction] Warning: similarity_power={self.similarity_power} must be > 0. "
+                "Using 1.0."
+            )
+            self.similarity_power = 1.0
+        self.similarity_clip_eps = float(similarity_clip_eps)
+        if self.similarity_clip_eps <= 0 or self.similarity_clip_eps >= 0.5:
+            print(
+                f"[TransformerCostFunction] Warning: similarity_clip_eps={self.similarity_clip_eps} out of range. "
+                "Using 1e-2."
+            )
+            self.similarity_clip_eps = 1e-2
 
         models_dir = Path(__file__).parent.parent / "models"
         if str(models_dir) not in sys.path:
@@ -732,6 +790,15 @@ class TransformerCostFunction(StitchCostFunction):
         ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
 
         model_config = ckpt.get('model_config', {})
+        checkpoint_objective = str(model_config.get("training_objective", "classification")).lower()
+        if checkpoint_objective not in {"classification", "ranking"}:
+            checkpoint_objective = "classification"
+        if checkpoint_objective != self.training_objective:
+            print(
+                f"[TransformerCostFunction] Warning: runtime training_objective={self.training_objective} "
+                f"differs from checkpoint training_objective={checkpoint_objective}; using runtime value."
+            )
+        model_config["training_objective"] = self.training_objective
         self.model = SiameseTransformerNetwork(**model_config)
         load_result = self.model.load_state_dict(ckpt['model_state_dict'], strict=False)
         legacy_time_bias_keys = {
@@ -758,10 +825,53 @@ class TransformerCostFunction(StitchCostFunction):
         self.seq_mean = torch.as_tensor(ckpt.get('seq_mean', np.zeros(8)),
                                          device=self.device, dtype=torch.float32)
         self.seq_std = torch.as_tensor(ckpt.get('seq_std', np.ones(8)),
-                                        device=self.device, dtype=torch.float32)
+                                        device=self.device, dtype=torch.float32).clamp_min(1e-6)
+        self.ep_mean = torch.as_tensor(ckpt.get('ep_mean', np.zeros(4)),
+                                       device=self.device, dtype=torch.float32)
+        self.ep_std = torch.as_tensor(ckpt.get('ep_std', np.ones(4)),
+                                      device=self.device, dtype=torch.float32).clamp_min(1e-6)
 
         print(f"[TransformerCostFunction] Loaded model from {checkpoint_path}")
         self._initialize_calibration()
+
+    def _similarity_to_raw_base_cost(self, similarity: float) -> float:
+        """
+        Convert model similarity to an uncalibrated base cost before time penalty.
+        Mapping is monotonic so ordering is preserved while dynamic range can be widened.
+        """
+        sim = float(self.np.clip(similarity, self.similarity_clip_eps, 1.0 - self.similarity_clip_eps))
+        if self.similarity_mapping == "odds":
+            # Emphasize mid/low similarities: d = (1-s)/s
+            dissimilarity = (1.0 - sim) / sim
+        elif self.similarity_mapping == "power":
+            dissimilarity = (1.0 - sim) ** self.similarity_power
+        else:
+            dissimilarity = (1.0 - sim)
+        return float(dissimilarity * self.scale_factor)
+
+    def _score_to_raw_base_cost(self, score: float) -> float:
+        """
+        Convert model output to an uncalibrated non-negative base cost.
+
+        - legacy_similarity: model output is a similarity in [0, 1]
+        - direct_cost: model output is an unconstrained scalar and is mapped via softplus
+        """
+        if self.score_mapping == "direct_cost":
+            x = float(score)
+            softplus = self.np.log1p(self.np.exp(-abs(x))) + max(x, 0.0)
+            return float(softplus)
+        return self._similarity_to_raw_base_cost(score)
+
+    def _to_raw_total_cost(self, raw_base_cost: float, gap: float) -> float:
+        """
+        Convert model base score to raw total cost used by stitching.
+
+        Ranking+direct_cost outputs are trained against Bhattacharyya total cost,
+        so adding an extra explicit gap penalty would double-count time.
+        """
+        if self.use_explicit_time_penalty:
+            return float(raw_base_cost + self.time_penalty * gap)
+        return float(raw_base_cost)
 
     def _resolve_path(self, path: str) -> str:
         if path is None:
@@ -779,7 +889,7 @@ class TransformerCostFunction(StitchCostFunction):
         return str(project_root / "models" / "outputs" / "transformer_calibration.json")
 
     def _initialize_calibration(self):
-        if self.calibration_mode == "linear":
+        if self.calibration_mode in {"linear", "off"}:
             return
 
         path = self.calibration_path or self._default_calibration_path()
@@ -812,6 +922,18 @@ class TransformerCostFunction(StitchCostFunction):
                 f"[TransformerCostFunction] Warning: runtime time_penalty={self.time_penalty} "
                 f"differs from calibration fit time_penalty={fit_time_penalty}."
             )
+        fit_mapping = fit_params.get("similarity_mapping", None)
+        fit_power = fit_params.get("similarity_power", None)
+        if fit_mapping is not None and str(fit_mapping).lower() != self.similarity_mapping:
+            print(
+                f"[TransformerCostFunction] Warning: runtime similarity_mapping={self.similarity_mapping} "
+                f"differs from calibration fit similarity_mapping={fit_mapping}."
+            )
+        if fit_power is not None and abs(float(fit_power) - float(self.similarity_power)) > 1e-9:
+            print(
+                f"[TransformerCostFunction] Warning: runtime similarity_power={self.similarity_power} "
+                f"differs from calibration fit similarity_power={fit_power}."
+            )
 
     def _load_calibration_artifact(self, path: str):
         try:
@@ -842,6 +964,30 @@ class TransformerCostFunction(StitchCostFunction):
             if domain[0] >= domain[1]:
                 domain = [float(x_knots[0]), float(x_knots[-1])]
 
+            fit_params = artifact.get("fit_params", {})
+            target_mapping = fit_params.get("target_mapping", "")
+            if target_mapping and target_mapping != "raw_total_to_bhat_total":
+                print(
+                    f"[TransformerCostFunction] Warning: calibration artifact uses "
+                    f"target_mapping='{target_mapping}', expected 'raw_total_to_bhat_total'."
+                )
+
+            fit_metrics = artifact.get("fit_metrics", {})
+            spearman = fit_metrics.get("spearman", None)
+            try:
+                spearman_value = float(spearman) if spearman is not None else None
+            except (TypeError, ValueError):
+                spearman_value = None
+            if (
+                spearman_value is not None
+                and self.np.isfinite(spearman_value)
+                and spearman_value < 0.5
+            ):
+                print(
+                    f"[TransformerCostFunction] Warning: weak calibration fit "
+                    f"(spearman={spearman_value:.3f})."
+                )
+
             artifact["x_knots"] = x_knots
             artifact["y_knots"] = y_knots
             artifact["domain"] = domain
@@ -850,14 +996,14 @@ class TransformerCostFunction(StitchCostFunction):
             print(f"[TransformerCostFunction] Failed to load calibration artifact '{path}': {exc}")
             return None
 
-    def _apply_calibration(self, raw_base_cost: float) -> float:
-        if self.calibration_mode == "linear" or self.calibration is None:
-            return float(raw_base_cost)
+    def _apply_calibration(self, raw_cost: float) -> float:
+        if self.calibration_mode in {"linear", "off"} or self.calibration is None:
+            return float(raw_cost)
 
         x_knots = self.calibration["x_knots"]
         y_knots = self.calibration["y_knots"]
         domain_min, domain_max = self.calibration["domain"]
-        clipped = float(self.np.clip(raw_base_cost, domain_min, domain_max))
+        clipped = float(self.np.clip(raw_cost, domain_min, domain_max))
         calibrated = self.np.interp(clipped, x_knots, y_knots)
         return float(calibrated)
 
@@ -872,6 +1018,7 @@ class TransformerCostFunction(StitchCostFunction):
             gap = t2[0] - t1[-1]
 
             if gap < 0 or gap > TIME_WIN:
+                self.invalid_cost_count += 1
                 return 1e6
 
             seq_a = self._extract_sequence(track1)
@@ -880,25 +1027,117 @@ class TransformerCostFunction(StitchCostFunction):
 
             seq_a_t = torch.FloatTensor(seq_a).unsqueeze(0).to(self.device)
             seq_b_t = torch.FloatTensor(seq_b).unsqueeze(0).to(self.device)
-            seq_a_t = (seq_a_t - self.seq_mean) / (self.seq_std + 1e-8)
-            seq_b_t = (seq_b_t - self.seq_mean) / (self.seq_std + 1e-8)
+            seq_a_t = (seq_a_t - self.seq_mean) / self.seq_std
+            seq_b_t = (seq_b_t - self.seq_mean) / self.seq_std
 
             # Padding masks (all False = no padding for single sequences)
             mask_a = torch.zeros(1, seq_a_t.size(1), dtype=torch.bool, device=self.device)
             mask_b = torch.zeros(1, seq_b_t.size(1), dtype=torch.bool, device=self.device)
             endpoint_t = torch.FloatTensor(endpoint).unsqueeze(0).to(self.device)
+            endpoint_t = (endpoint_t - self.ep_mean) / self.ep_std
 
             with torch.no_grad():
-                similarity = self.model(seq_a_t, mask_a, seq_b_t, mask_b, endpoint_t).item()
+                model_output = self.model(seq_a_t, mask_a, seq_b_t, mask_b, endpoint_t).item()
 
-            raw_base_cost = (1.0 - similarity) * self.scale_factor
-            base_cost = self._apply_calibration(raw_base_cost)
-            time_cost = self.time_penalty * gap
-            return float(base_cost + time_cost)
+            raw_base_cost = self._score_to_raw_base_cost(model_output)
+            raw_total_cost = self._to_raw_total_cost(raw_base_cost, gap)
+            if not self.np.isfinite(raw_total_cost):
+                self.invalid_cost_count += 1
+                return 1e6
+            calibrated_total = self._apply_calibration(raw_total_cost)
+            if self.calibration_mode not in {"linear", "off"} and self.calibration is not None:
+                self.calibration_applied_count += 1
+            if not self.np.isfinite(calibrated_total):
+                self.invalid_cost_count += 1
+                return 1e6
+            return float(calibrated_total)
 
         except Exception as e:
             print(f"[TransformerCostFunction] Error: {e}")
+            self.invalid_cost_count += 1
             return 1e6
+
+
+class GateRankCostFunction(StitchCostFunction):
+    """Two-stage cost: physics gate first, learned ranker second."""
+
+    def __init__(self, gate_fn: StitchCostFunction, rank_fn: StitchCostFunction,
+                 gate_thresh: float = None, stats_log_on_exit: bool = True):
+        self.gate_fn = gate_fn
+        self.rank_fn = rank_fn
+        self._gate_thresh_override = float(gate_thresh) if gate_thresh is not None else None
+        self._stats_log_on_exit = bool(stats_log_on_exit)
+
+        # Basic observability counters for per-process runs.
+        self.gate_evaluations = 0
+        self.gate_rejections = 0
+        self.rank_evaluations = 0
+        self.rank_fallbacks = 0
+        self.gate_failures = 0
+
+        if self._stats_log_on_exit:
+            atexit.register(self.log_stats)
+
+    def _resolve_gate_thresh(self, param: dict) -> float:
+        if self._gate_thresh_override is not None:
+            return self._gate_thresh_override
+        return float(param["stitch_thresh"])
+
+    def get_stats(self) -> dict:
+        accepted = self.gate_evaluations - self.gate_rejections
+        acceptance_rate = accepted / self.gate_evaluations if self.gate_evaluations else 0.0
+        return {
+            "gate_evaluations": self.gate_evaluations,
+            "gate_rejections": self.gate_rejections,
+            "gate_acceptances": accepted,
+            "acceptance_rate": acceptance_rate,
+            "rank_evaluations": self.rank_evaluations,
+            "rank_fallbacks": self.rank_fallbacks,
+            "gate_failures": self.gate_failures,
+        }
+
+    def log_stats(self):
+        stats = self.get_stats()
+        print(f"[GateRankCostFunction] Stats: {json.dumps(stats, sort_keys=True)}")
+
+    def compute_cost(self, track1: dict, track2: dict,
+                    TIME_WIN: float, param: dict) -> float:
+        self.gate_evaluations += 1
+        try:
+            gate_cost = float(self.gate_fn.compute_cost(track1, track2, TIME_WIN, param))
+        except Exception as exc:
+            self.gate_failures += 1
+            print(f"[GateRankCostFunction] Gate error: {exc}")
+            return 1e6
+
+        if not math.isfinite(gate_cost):
+            self.gate_failures += 1
+            return 1e6
+
+        try:
+            effective_gate_thresh = self._resolve_gate_thresh(param)
+        except Exception as exc:
+            self.gate_failures += 1
+            print(f"[GateRankCostFunction] Invalid gate threshold: {exc}")
+            return 1e6
+
+        if gate_cost > effective_gate_thresh:
+            self.gate_rejections += 1
+            return gate_cost
+
+        self.rank_evaluations += 1
+        try:
+            rank_cost = float(self.rank_fn.compute_cost(track1, track2, TIME_WIN, param))
+        except Exception as exc:
+            self.rank_fallbacks += 1
+            print(f"[GateRankCostFunction] Rank error, fallback to gate cost: {exc}")
+            return gate_cost
+
+        if not math.isfinite(rank_cost):
+            self.rank_fallbacks += 1
+            return gate_cost
+
+        return rank_cost
 
 
 class CostFunctionFactory:
@@ -1030,20 +1269,48 @@ class CostFunctionFactory:
             if checkpoint_path is None:
                 raise ValueError("checkpoint_path required for transformer cost function")
             checkpoint_path = CostFunctionFactory._resolve_path(checkpoint_path)
+            training_objective = str(config.get('training_objective', 'classification')).lower()
+            default_score_mapping = 'direct_cost' if training_objective == 'ranking' else 'legacy_similarity'
+            default_calibration_mode = 'off' if training_objective == 'ranking' else 'isotonic'
             return TransformerCostFunction(
                 checkpoint_path=checkpoint_path,
                 device=config.get('device', None),
                 scale_factor=config.get('scale_factor', 5.0),
                 time_penalty=config.get('time_penalty', 0.1),
-                calibration_mode=config.get('calibration_mode', 'isotonic'),
+                calibration_mode=config.get('calibration_mode', default_calibration_mode),
                 calibration_path=config.get('calibration_path', None),
+                similarity_mapping=config.get('similarity_mapping', 'linear'),
+                similarity_power=config.get('similarity_power', 1.0),
+                similarity_clip_eps=config.get('similarity_clip_eps', 1e-2),
+                training_objective=training_objective,
+                score_mapping=config.get('score_mapping', default_score_mapping),
+            )
+
+        elif cost_type in ('gate_rank', 'hybrid'):
+            gate_config = config.get('gate')
+            rank_config = config.get('rank')
+            if gate_config is None or rank_config is None:
+                raise ValueError("gate and rank sub-configs are required for gate_rank cost function")
+
+            gate_type = str(gate_config.get('type', '')).lower()
+            rank_type = str(rank_config.get('type', '')).lower()
+            if gate_type in ('gate_rank', 'hybrid') or rank_type in ('gate_rank', 'hybrid'):
+                raise ValueError("Nested gate_rank/hybrid cost function is not supported")
+
+            gate_fn = CostFunctionFactory.create(gate_config)
+            rank_fn = CostFunctionFactory.create(rank_config)
+            return GateRankCostFunction(
+                gate_fn=gate_fn,
+                rank_fn=rank_fn,
+                gate_thresh=config.get('gate_thresh', None),
+                stats_log_on_exit=config.get('stats_log_on_exit', True),
             )
 
         else:
             raise ValueError(
                 f"Unknown cost function type: {cost_type}. "
                 f"Supported: 'bhattacharyya', 'siamese', 'logistic_regression', "
-                f"'torch_logistic', 'mlp', 'tcn', 'transformer'"
+                f"'torch_logistic', 'mlp', 'tcn', 'transformer', 'gate_rank'/'hybrid'"
             )
 
 

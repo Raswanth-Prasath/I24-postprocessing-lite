@@ -26,6 +26,13 @@ DEFAULT_V4 = "Logistic Regression/training_dataset_v4.npz"
 DEFAULT_MODEL = "Logistic Regression/model_artifacts/consensus_top10_full47.pkl"
 DEFAULT_OUTPUT = "Logistic Regression/data/training_dataset_v5_diverse.npz"
 DEFAULT_REPORT = "Logistic Regression/reports/training_dataset_v5_diverse_report.json"
+OPTIONAL_META_KEYS = (
+    "source_dataset",
+    "source_split_tag",
+    "scenario",
+    "mask_idx",
+    "pair_id",
+)
 
 
 def resolve_existing_path(path_str, fallbacks=None):
@@ -53,7 +60,21 @@ def load_npz(path):
     X = data["X"]
     y = data["y"].astype(int)
     feature_names = [str(x) for x in data["feature_names"]]
-    return X, y, feature_names
+    metadata = {k: np.asarray(data[k]) for k in OPTIONAL_META_KEYS if k in data}
+    return X, y, feature_names, metadata
+
+
+def meta_or_default(metadata, key, length, default, dtype=object):
+    """Return metadata array if present and valid; otherwise return default-filled array."""
+    if key in metadata:
+        arr = np.asarray(metadata[key])
+        if len(arr) == length:
+            if dtype is not None:
+                return arr.astype(dtype)
+            return arr
+    if dtype is None:
+        return np.array([default] * length)
+    return np.array([default] * length, dtype=dtype)
 
 
 def score_v4_samples(v4_X, feature_names, model_path):
@@ -256,8 +277,8 @@ def build_dataset(args):
     v4_path = resolve_existing_path(args.v4_dataset, [DEFAULT_V4])
     model_path = resolve_existing_path(args.model_path, [DEFAULT_MODEL])
 
-    adv_X, adv_y, adv_features = load_npz(adv_path)
-    v4_X, v4_y, v4_features = load_npz(v4_path)
+    adv_X, adv_y, adv_features, adv_meta = load_npz(adv_path)
+    v4_X, v4_y, v4_features, v4_meta = load_npz(v4_path)
 
     if adv_features != v4_features:
         raise ValueError("Feature schema mismatch between advanced and v4 datasets")
@@ -327,10 +348,37 @@ def build_dataset(args):
     n_sel = len(sel_y)
 
     # Extra metadata arrays (optional; backward compatible).
-    source_dataset = np.array(["advanced"] * n_adv + ["v4"] * n_sel, dtype=object)
-    source_split_tag = np.array(["advanced_keepall"] * n_adv + ["v4_diverse_curated"] * n_sel, dtype=object)
-    scenario = np.array(["unknown"] * (n_adv + n_sel), dtype=object)
-    mask_idx = np.array([-1] * (n_adv + n_sel), dtype=np.int32)
+    adv_source_dataset = meta_or_default(adv_meta, "source_dataset", n_adv, "advanced", dtype=object)
+    adv_source_split = meta_or_default(adv_meta, "source_split_tag", n_adv, "advanced_keepall", dtype=object)
+    adv_scenario = meta_or_default(adv_meta, "scenario", n_adv, "unknown", dtype=object)
+    adv_mask_idx = meta_or_default(adv_meta, "mask_idx", n_adv, -1, dtype=np.int32)
+    adv_pair_id = meta_or_default(adv_meta, "pair_id", n_adv, None, dtype=object)
+    if np.any(adv_pair_id == None):  # noqa: E711
+        adv_pair_id = np.array([f"advanced_{i}" for i in range(n_adv)], dtype=object)
+
+    v4_source_dataset_full = meta_or_default(v4_meta, "source_dataset", len(v4_y), "v4", dtype=object)
+    v4_source_split_full = meta_or_default(v4_meta, "source_split_tag", len(v4_y), "v4_diverse_curated", dtype=object)
+    v4_scenario_full = meta_or_default(v4_meta, "scenario", len(v4_y), "unknown", dtype=object)
+    v4_mask_idx_full = meta_or_default(v4_meta, "mask_idx", len(v4_y), -1, dtype=np.int32)
+    v4_pair_id_full = meta_or_default(v4_meta, "pair_id", len(v4_y), None, dtype=object)
+
+    sel_source_dataset = v4_source_dataset_full[selected_v4]
+    sel_source_split = v4_source_split_full[selected_v4]
+    sel_scenario = v4_scenario_full[selected_v4]
+    sel_mask_idx = v4_mask_idx_full[selected_v4]
+    sel_pair_id = v4_pair_id_full[selected_v4]
+    missing_sel_pair_id = sel_pair_id == None  # noqa: E711
+    if np.any(missing_sel_pair_id):
+        sel_pair_id = sel_pair_id.astype(object)
+        for local_idx, global_idx in enumerate(selected_v4):
+            if missing_sel_pair_id[local_idx]:
+                sel_pair_id[local_idx] = f"v4_{int(global_idx)}"
+
+    source_dataset = np.hstack([adv_source_dataset, sel_source_dataset]).astype(object)
+    source_split_tag = np.hstack([adv_source_split, sel_source_split]).astype(object)
+    scenario = np.hstack([adv_scenario, sel_scenario]).astype(object)
+    mask_idx = np.hstack([adv_mask_idx, sel_mask_idx]).astype(np.int32)
+    pair_id = np.hstack([adv_pair_id, sel_pair_id]).astype(object)
     hardness_bucket = np.array(["advanced"] * n_adv + selected_bucket.tolist(), dtype=object)
     v4_probability = np.hstack([np.full(n_adv, np.nan, dtype=float), sel_prob.astype(float)])
     v4_margin = np.hstack([np.full(n_adv, np.nan, dtype=float), sel_margin.astype(float)])
@@ -349,6 +397,7 @@ def build_dataset(args):
         source_split_tag=source_split_tag,
         scenario=scenario,
         mask_idx=mask_idx,
+        pair_id=pair_id,
         hardness_bucket=hardness_bucket,
         v4_probability=v4_probability,
         v4_margin=v4_margin,
@@ -406,6 +455,13 @@ def build_dataset(args):
             "neg": out_neg,
             "feature_count": int(X.shape[1]),
             "is_balanced": bool(out_pos == out_neg),
+        },
+        "metadata_coverage": {
+            "advanced_keys_present": sorted(list(adv_meta.keys())),
+            "v4_keys_present": sorted(list(v4_meta.keys())),
+            "output_unknown_scenario_fraction": float(np.mean(scenario.astype(str) == "unknown")),
+            "output_mask_idx_known_fraction": float(np.mean(mask_idx >= 0)),
+            "output_unique_source_tags": sorted([str(x) for x in np.unique(source_split_tag)]),
         },
         "top_single_feature_auc": {
             "advanced": single_feature_auc_report(adv_X, adv_y, feature_names),

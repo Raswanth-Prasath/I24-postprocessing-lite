@@ -114,6 +114,10 @@ def add_advanced_features_simple():
     # Load all fragment data
     all_X = []
     all_y = []
+    all_scenarios = []
+    all_mask_idx = []
+    all_source_split_tag = []
+    all_pair_id = []
     all_features_names = None
 
     for dataset_name in DATASETS:
@@ -141,6 +145,10 @@ def add_advanced_features_simple():
         # Now add advanced features to each pair
         X_rows = []
         y_labels = []
+        scenario_rows = []
+        mask_idx_rows = []
+        source_split_rows = []
+        pair_id_rows = []
 
         all_pairs = positive_pairs + negative_pairs
         labels = [1] * len(positive_pairs) + [0] * len(negative_pairs)
@@ -162,6 +170,11 @@ def add_advanced_features_simple():
 
             X_rows.append([feature_dict[fname] for fname in all_features_names])
             y_labels.append(label)
+            scenario_rows.append(dataset_name)
+            mask_idx_rows.append(-1)
+            source_split_rows.append(f"{dataset_name}_raw_pair")
+            pair_type = "pos" if label == 1 else "neg"
+            pair_id_rows.append(f"{dataset_name}:{pair_type}:{idx_a}:{idx_b}")
 
         X = np.array(X_rows)
         y = np.array(y_labels)
@@ -169,10 +182,18 @@ def add_advanced_features_simple():
         print(f"  Dataset shape: {X.shape}")
         all_X.append(X)
         all_y.append(y)
+        all_scenarios.append(np.array(scenario_rows, dtype=object))
+        all_mask_idx.append(np.array(mask_idx_rows, dtype=np.int32))
+        all_source_split_tag.append(np.array(source_split_rows, dtype=object))
+        all_pair_id.append(np.array(pair_id_rows, dtype=object))
 
     # Combine all datasets
     X_combined = np.vstack(all_X)
     y_combined = np.hstack(all_y)
+    scenario_combined = np.hstack(all_scenarios)
+    mask_idx_combined = np.hstack(all_mask_idx)
+    source_split_combined = np.hstack(all_source_split_tag)
+    pair_id_combined = np.hstack(all_pair_id)
 
     print("\n" + "="*60)
     print("COMBINED DATASET WITH ADVANCED FEATURES")
@@ -191,7 +212,11 @@ def add_advanced_features_simple():
         output_file,
         X=X_combined,
         y=y_combined,
-        feature_names=all_features_names
+        feature_names=all_features_names,
+        scenario=scenario_combined,
+        mask_idx=mask_idx_combined,
+        source_split_tag=source_split_combined,
+        pair_id=pair_id_combined,
     )
 
     print(f"\nEnhanced dataset saved to: {output_file}")

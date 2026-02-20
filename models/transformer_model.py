@@ -6,8 +6,10 @@ Architecture:
   -> Linear projection (8 -> 64)
   -> Sinusoidal positional encoding + learned time-aware bias (from t_norm)
   -> TransformerEncoder (2 layers, 4 heads, d_ff=128)
-  -> Masked mean pooling -> 64-dim embedding
-  -> Similarity head with |emb_a - emb_b| + endpoint features -> probability
+  -> Endpoint-weighted pooling (first/last/mean) -> 64-dim embedding
+  -> Similarity head with |emb_a - emb_b| + endpoint features
+     - classification objective: sigmoid probability
+     - ranking objective: raw scalar score (lower = better)
 
 ~55K parameters
 """
@@ -80,11 +82,21 @@ class TransformerTrajectoryEncoder(nn.Module):
     Transformer encoder for variable-length trajectory sequences.
 
     Linear(8, 64) -> PositionalEncoding + TimeAwarePositionalBias
-    -> TransformerEncoder -> masked mean pool
+    -> TransformerEncoder -> endpoint-weighted pooling
     """
 
-    def __init__(self, input_size: int = 8, d_model: int = 64, nhead: int = 4,
-                 dim_feedforward: int = 128, num_layers: int = 2, dropout: float = 0.2):
+    def __init__(
+        self,
+        input_size: int = 8,
+        d_model: int = 64,
+        nhead: int = 4,
+        dim_feedforward: int = 128,
+        num_layers: int = 2,
+        dropout: float = 0.2,
+        pool_weight_first: float = 0.2,
+        pool_weight_last: float = 0.5,
+        pool_weight_mean: float = 0.3,
+    ):
         super().__init__()
 
         self.d_model = d_model
@@ -104,6 +116,20 @@ class TransformerTrajectoryEncoder(nn.Module):
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.layer_norm = nn.LayerNorm(d_model)
         self.output_size = d_model  # 64
+        # Endpoint-aware pooling emphasizes fragment boundaries critical for stitching.
+        self.pool_weight_first = float(pool_weight_first)
+        self.pool_weight_last = float(pool_weight_last)
+        self.pool_weight_mean = float(pool_weight_mean)
+        self._validate_pooling_weights()
+
+    def _validate_pooling_weights(self) -> None:
+        weights = (self.pool_weight_first, self.pool_weight_last, self.pool_weight_mean)
+        if any(w < 0 for w in weights):
+            raise ValueError(f"Pooling weights must be non-negative, got {weights}.")
+        if not all(math.isfinite(w) for w in weights):
+            raise ValueError(f"Pooling weights must be finite, got {weights}.")
+        if sum(weights) <= 0:
+            raise ValueError(f"At least one pooling weight must be > 0, got {weights}.")
 
     def _encode_input_tokens(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -123,18 +149,38 @@ class TransformerTrajectoryEncoder(nn.Module):
         x = x + self.time_bias(t_norm)
         return x
 
-    def _masked_mean_pool(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]) -> torch.Tensor:
+    def _endpoint_weighted_pool(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]) -> torch.Tensor:
         """
-        Mean pool over valid timesteps only.
+        Endpoint-weighted pooling over valid timesteps.
         """
+        batch_size, seq_len, feat_dim = x.shape
+
         if padding_mask is not None:
             valid_mask = ~padding_mask
             valid_mask_expanded = valid_mask.unsqueeze(-1).float()
             x_masked = x * valid_mask_expanded
-            lengths = valid_mask.sum(dim=1, keepdim=True).float().clamp(min=1)
-            pooled = x_masked.sum(dim=1) / lengths
+            lengths = valid_mask.sum(dim=1).clamp(min=1)  # (batch,)
+            mean_pool = x_masked.sum(dim=1) / lengths.unsqueeze(1).float()
         else:
-            pooled = x.mean(dim=1)
+            lengths = torch.full((batch_size,), seq_len, device=x.device, dtype=torch.long)
+            mean_pool = x.mean(dim=1)
+
+        # Endpoints are taken from the raw token stream. For right-padded sequences this
+        # captures real boundary states, while mean pooling still ignores padded tokens.
+        first_idx = torch.zeros(batch_size, 1, 1, device=x.device, dtype=torch.long).expand(-1, 1, feat_dim)
+        first_tok = torch.gather(x, dim=1, index=first_idx).squeeze(1)
+
+        # For length-1 sequences, last_pos becomes 0 so first_tok == last_tok.
+        last_pos = (lengths - 1).clamp(min=0).view(-1, 1, 1).expand(-1, 1, feat_dim)
+        last_tok = torch.gather(x, dim=1, index=last_pos).squeeze(1)
+
+        w_first = self.pool_weight_first
+        w_last = self.pool_weight_last
+        w_mean = self.pool_weight_mean
+        # Keep normalization robust even if custom configs are close to zero.
+        w_sum = max(w_first + w_last + w_mean, 1e-8)
+
+        pooled = (w_first * first_tok + w_last * last_tok + w_mean * mean_pool) / w_sum
         return pooled
 
     def _forward_layer_with_attention(
@@ -184,11 +230,11 @@ class TransformerTrajectoryEncoder(nn.Module):
             x: (batch, seq_len, input_size)
             padding_mask: (batch, seq_len) True = padded positions to ignore
         Returns:
-            (batch, d_model) embedding via masked mean pooling
+            (batch, d_model) embedding via endpoint-weighted pooling
         """
         x = self._encode_input_tokens(x)
         x = self.transformer(x, src_key_padding_mask=padding_mask)
-        pooled = self._masked_mean_pool(x, padding_mask)
+        pooled = self._endpoint_weighted_pool(x, padding_mask)
         return self.layer_norm(pooled)
 
     def encode_with_attention(
@@ -216,7 +262,7 @@ class TransformerTrajectoryEncoder(nn.Module):
         if self.transformer.norm is not None:
             x = self.transformer.norm(x)
 
-        pooled = self._masked_mean_pool(x, padding_mask)
+        pooled = self._endpoint_weighted_pool(x, padding_mask)
         embedding = self.layer_norm(pooled)
 
         if not all_attn:
@@ -238,26 +284,47 @@ class SiameseTransformerNetwork(nn.Module):
     Siamese Transformer for trajectory fragment similarity.
 
     Twin encoders (shared) -> [emb_a; emb_b; |emb_a - emb_b|; endpoint_feats]
-    -> similarity head -> probability
+    -> similarity head -> probability (classification) or raw score (ranking)
 
     Key difference from TCN: adds |emb_a - emb_b| element-wise difference.
     """
 
-    def __init__(self, input_size: int = 8, d_model: int = 64, nhead: int = 4,
-                 dim_feedforward: int = 128, num_layers: int = 2, dropout: float = 0.2,
-                 endpoint_dim: int = 4):
+    def __init__(
+        self,
+        input_size: int = 8,
+        d_model: int = 64,
+        nhead: int = 4,
+        dim_feedforward: int = 128,
+        num_layers: int = 2,
+        dropout: float = 0.2,
+        endpoint_dim: int = 4,
+        training_objective: str = "classification",
+        pool_weight_first: float = 0.2,
+        pool_weight_last: float = 0.5,
+        pool_weight_mean: float = 0.3,
+    ):
         super().__init__()
 
         self.encoder = TransformerTrajectoryEncoder(
             input_size=input_size, d_model=d_model, nhead=nhead,
             dim_feedforward=dim_feedforward, num_layers=num_layers, dropout=dropout,
+            pool_weight_first=pool_weight_first,
+            pool_weight_last=pool_weight_last,
+            pool_weight_mean=pool_weight_mean,
         )
 
         emb_size = self.encoder.output_size  # 64
         # [emb_a; emb_b; |emb_a - emb_b|; endpoint_feats] = 64 + 64 + 64 + 4 = 196
         combined_dim = emb_size * 3 + endpoint_dim
 
-        self.similarity_head = nn.Sequential(
+        objective = str(training_objective or "classification").lower()
+        if objective not in {"classification", "ranking"}:
+            raise ValueError(
+                f"training_objective must be 'classification' or 'ranking', got '{training_objective}'."
+            )
+        self.training_objective = objective
+
+        head_layers = [
             nn.Linear(combined_dim, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
@@ -265,8 +332,10 @@ class SiameseTransformerNetwork(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(64, 1),
-            nn.Sigmoid(),
-        )
+        ]
+        if self.training_objective == "classification":
+            head_layers.append(nn.Sigmoid())
+        self.similarity_head = nn.Sequential(*head_layers)
 
     def forward(self, seq_a: torch.Tensor, mask_a: Optional[torch.Tensor],
                 seq_b: torch.Tensor, mask_b: Optional[torch.Tensor],
@@ -279,7 +348,8 @@ class SiameseTransformerNetwork(nn.Module):
             mask_b: (batch, seq_len_b) padding mask
             endpoint_features: (batch, 4)
         Returns:
-            (batch, 1) similarity probability
+            (batch, 1) similarity probability for classification objective,
+            or raw score for ranking objective (lower score = better match).
         """
         emb_a = self.encoder(seq_a, mask_a)
         emb_b = self.encoder(seq_b, mask_b)

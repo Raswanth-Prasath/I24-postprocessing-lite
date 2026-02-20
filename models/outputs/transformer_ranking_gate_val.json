@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "generated_at_utc": "2026-02-20T00:31:23.042988+00:00",
+    "checkpoint_path": "models/outputs/transformer_ranking_model_full80.pth",
+    "data_source": "dataset",
+    "dataset_path": "models/outputs/transformer_ranking_dataset.jsonl",
+    "ranking_split": "val",
+    "num_dataset_rows_total": 66093,
+    "num_dataset_rows_split_selected": 13711,
+    "num_dataset_rows_after_cap": 13711,
+    "fragments_path": "models/outputs/transformer_ranking_dataset.fragments.jsonl",
+    "num_candidate_rows_valid_costs": 13711,
+    "num_candidate_rows_with_gt": 13425,
+    "params": {
+      "ranking_min_candidates": 2,
+      "scale_factor": 5.0,
+      "time_penalty": 0.1,
+      "training_objective": "ranking",
+      "score_mapping": "direct_cost",
+      "similarity_mapping": "linear",
+      "similarity_power": 1.0,
+      "similarity_clip_eps": 0.01,
+      "ranking_max_pairs": 0,
+      "replay": false,
+      "ranking_split": "val"
+    },
+    "gate_thresholds": {
+      "pairwise_acc_gt_crossclass": 0.95,
+      "anchor_top1_acc": 0.85,
+      "mean_anchor_spearman": 0.55
+    }
+  },
+  "metrics": {
+    "eligible_anchor_count": 199,
+    "pairwise_acc_gt_crossclass": 0.9713570028316271,
+    "anchor_top1_acc": 0.7638190954773869,
+    "mean_anchor_spearman": 0.5614708970760344,
+    "pairwise_correct": 17838,
+    "pairwise_total": 18364,
+    "top1_correct": 152,
+    "top1_total": 199,
+    "spearman_anchor_count": 199
+  },
+  "decision": {
+    "recommendation": "hold",
+    "checks": [
+      {
+        "name": "pairwise_acc_gt_crossclass",
+        "actual": 0.9713570028316271,
+        "threshold": 0.95,
+        "operator": ">=",
+        "pass": true
+      },
+      {
+        "name": "anchor_top1_acc",
+        "actual": 0.7638190954773869,
+        "threshold": 0.85,
+        "operator": ">=",
+        "pass": false
+      },
+      {
+        "name": "mean_anchor_spearman",
+        "actual": 0.5614708970760344,
+        "threshold": 0.55,
+        "operator": ">=",
+        "pass": true
+      }
+    ],
+    "reasons": [
+      "pairwise_acc_gt_crossclass: PASS (0.9714 >= 0.9500)",
+      "anchor_top1_acc: FAIL (0.7638 >= 0.8500)",
+      "mean_anchor_spearman: PASS (0.5615 >= 0.5500)"
+    ]
+  }
+}

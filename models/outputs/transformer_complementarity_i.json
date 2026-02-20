@@ -1,0 +1,157 @@
+{
+  "metadata": {
+    "generated_at_utc": "2026-02-19T00:58:32.976755+00:00",
+    "checkpoint_path": "/home/raswanth/I24/I24-postprocessing-lite/models/outputs/transformer_stitch_model.pth",
+    "audit_scenario": "i",
+    "num_records_collected": 200,
+    "num_candidate_rows_valid_costs": 141,
+    "num_candidate_rows_with_gt": 138,
+    "num_anchors_with_known_gt": 125,
+    "eligible_anchor_count": 0,
+    "params": {
+      "audit_min_candidates": 2,
+      "audit_go_lift_threshold": 0.15,
+      "scale_factor": 5.0,
+      "time_penalty": 0.1,
+      "similarity_mapping": "linear",
+      "similarity_power": 1.0,
+      "similarity_clip_eps": 0.01,
+      "audit_max_pairs": 200
+    },
+    "plots": {
+      "anchor_error_bar": "models/outputs/transformer_complementarity_anchor_error_bar.png",
+      "gap_slices": "models/outputs/transformer_complementarity_gap_slices.png"
+    }
+  },
+  "overall_metrics": {
+    "num_anchors": 0,
+    "bhat_top1_error_count": 0,
+    "tx_top1_error_count": 0,
+    "bhat_top1_error_rate": 0.0,
+    "tx_top1_error_rate": 0.0,
+    "edge_error_lift": 0.0,
+    "bhat_failure_recovery_count": 0,
+    "bhat_failure_recovery_rate": 0.0,
+    "tx_regression_on_bhat_correct_count": 0,
+    "tx_regression_rate_on_bhat_correct": 0.0,
+    "bhat_wrong_anchor_ids": [],
+    "tx_wrong_anchor_ids": [],
+    "bhat_wrong_tx_right_anchor_ids": [],
+    "bhat_right_tx_wrong_anchor_ids": []
+  },
+  "pair_level_metrics": {
+    "bhat": {
+      "num_pairs": 138,
+      "roc_auc": 1.0,
+      "avg_precision": 1.0
+    },
+    "transformer": {
+      "num_pairs": 138,
+      "roc_auc": 0.9927007299270073,
+      "avg_precision": 0.5
+    }
+  },
+  "slice_metrics": {
+    "gap_bins": {
+      "0-2": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "2-5": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "5-15": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "other": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      }
+    },
+    "candidate_count_bins": {
+      "2": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "3-4": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "5+": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      }
+    }
+  },
+  "error_sets": {
+    "bhat_wrong_tx_right_anchor_ids": [],
+    "bhat_right_tx_wrong_anchor_ids": [],
+    "bhat_wrong_tx_right_examples": [],
+    "bhat_right_tx_wrong_examples": []
+  },
+  "decision": {
+    "recommendation": "pivot",
+    "checks": [],
+    "reasons": [
+      "insufficient_data: no eligible anchors after GT/min-candidate filtering"
+    ]
+  }
+}

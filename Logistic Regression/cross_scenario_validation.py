@@ -21,10 +21,12 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import json
 from collections import defaultdict
+import argparse
 
-from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, confusion_matrix, classification_report
+from sklearn.pipeline import Pipeline
 from itertools import combinations
 
 
@@ -337,8 +339,86 @@ class CrossScenarioValidator:
         self.feature_stability_scores = stability_scores
         return stability_scores
 
+    def run_source_holdout_split(self, npz_path: str) -> pd.DataFrame:
+        """
+        Run a single source-holdout evaluation from an NPZ with source_split_tag.
 
-def main(data_dir: str = "."):
+        Returns one-row DataFrame with either executed metrics or skipped reason.
+        """
+        path = Path(npz_path)
+        if not path.exists():
+            return pd.DataFrame([{
+                "split_type": "source_holdout",
+                "status": "skipped",
+                "reason": f"dataset not found: {path}",
+            }])
+
+        data = np.load(path, allow_pickle=True)
+        X = data["X"]
+        y = data["y"]
+        if "source_split_tag" not in data:
+            return pd.DataFrame([{
+                "split_type": "source_holdout",
+                "status": "skipped",
+                "reason": "source_split_tag missing",
+            }])
+
+        tags = np.asarray(data["source_split_tag"]).astype(str)
+        unique_tags, counts = np.unique(tags, return_counts=True)
+        if len(unique_tags) < 2:
+            return pd.DataFrame([{
+                "split_type": "source_holdout",
+                "status": "skipped",
+                "reason": "fewer than 2 source tags",
+            }])
+
+        if {"advanced_keepall", "v4_diverse_curated"}.issubset(set(unique_tags)):
+            train_tag, test_tag = "advanced_keepall", "v4_diverse_curated"
+        else:
+            order = np.argsort(counts)[::-1]
+            train_tag = unique_tags[order[0]]
+            test_tag = unique_tags[order[1]]
+
+        train_mask = tags == train_tag
+        test_mask = tags == test_tag
+        X_train, y_train = X[train_mask], y[train_mask]
+        X_test, y_test = X[test_mask], y[test_mask]
+
+        if (len(np.unique(y_train)) < 2) or (len(np.unique(y_test)) < 2):
+            return pd.DataFrame([{
+                "split_type": "source_holdout",
+                "status": "skipped",
+                "reason": "single-class split",
+                "train_tag": train_tag,
+                "test_tag": test_tag,
+            }])
+
+        pipe = Pipeline([
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, solver="lbfgs", random_state=42)),
+        ])
+        pipe.fit(X_train, y_train)
+
+        y_train_prob = pipe.predict_proba(X_train)[:, 1]
+        y_test_prob = pipe.predict_proba(X_test)[:, 1]
+        auc_train = roc_auc_score(y_train, y_train_prob)
+        auc_test = roc_auc_score(y_test, y_test_prob)
+
+        return pd.DataFrame([{
+            "split_type": "source_holdout",
+            "status": "executed",
+            "reason": None,
+            "train_tag": train_tag,
+            "test_tag": test_tag,
+            "n_train": int(train_mask.sum()),
+            "n_test": int(test_mask.sum()),
+            "auc_train": float(auc_train),
+            "auc_test": float(auc_test),
+            "auc_drop": float(auc_train - auc_test),
+        }])
+
+
+def main(data_dir: str = ".", source_holdout_npz: str = None):
     """
     Main cross-scenario validation pipeline.
 
@@ -368,6 +448,12 @@ def main(data_dir: str = "."):
     # Results CSV
     results_df.to_csv(output_dir / "cross_scenario_results.csv", index=False)
     print(f"\n✓ Saved cross-scenario results")
+
+    source_holdout_df = None
+    if source_holdout_npz:
+        source_holdout_df = validator.run_source_holdout_split(source_holdout_npz)
+        source_holdout_df.to_csv(output_dir / "cross_scenario_source_holdout.csv", index=False)
+        print("✓ Saved source-holdout results")
 
     # Summary statistics
     print("\n" + "=" * 80)
@@ -438,6 +524,11 @@ Detailed Results by Split Type:
             report += subset.to_string(index=False)
             report += "\n"
 
+    if source_holdout_df is not None:
+        report += "\nSOURCE_HOLDOUT:\n"
+        report += source_holdout_df.to_string(index=False)
+        report += "\n"
+
     (output_dir / "cross_scenario_validation_report.md").write_text(report)
     print(f"✓ Saved comprehensive validation report")
 
@@ -449,4 +540,12 @@ Detailed Results by Split Type:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Cross-scenario and source-holdout validation")
+    parser.add_argument("--data-dir", default=".", help="Directory containing per-scenario NPZs")
+    parser.add_argument(
+        "--source-holdout-npz",
+        default=None,
+        help="Optional combined NPZ path with source_split_tag for source-holdout validation",
+    )
+    args = parser.parse_args()
+    main(data_dir=args.data_dir, source_holdout_npz=args.source_holdout_npz)

@@ -8,6 +8,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
+from sklearn.base import clone
 from sklearn.metrics import (
     average_precision_score,
     confusion_matrix,
@@ -229,6 +230,77 @@ def build_oof_probabilities(X_selected, y_true, model):
     return cross_val_predict(pipe, X_selected, y_true, cv=cv, method="predict_proba")[:, 1]
 
 
+def resolve_source_holdout_tags(source_split_tag):
+    """Pick train/test source tags for source-holdout validation."""
+    tags = np.asarray(source_split_tag).astype(str)
+    unique_tags, counts = np.unique(tags, return_counts=True)
+    if len(unique_tags) < 2:
+        return None, None
+
+    if {"advanced_keepall", "v4_diverse_curated"}.issubset(set(unique_tags)):
+        return "advanced_keepall", "v4_diverse_curated"
+
+    # Fallback to two largest partitions for deterministic behavior.
+    order = np.argsort(counts)[::-1]
+    return str(unique_tags[order[0]]), str(unique_tags[order[1]])
+
+
+def compute_source_holdout_metrics(X_selected, y_true, source_split_tag, model, threshold):
+    """
+    Compute source-holdout metrics.
+
+    Returns:
+        (result_dict_or_none, status_dict)
+    """
+    if source_split_tag is None:
+        return None, {"status": "skipped", "reason": "source_split_tag missing"}
+
+    train_tag, test_tag = resolve_source_holdout_tags(source_split_tag)
+    if train_tag is None or test_tag is None:
+        return None, {"status": "skipped", "reason": "fewer than 2 source tags"}
+
+    tags = np.asarray(source_split_tag).astype(str)
+    train_mask = tags == train_tag
+    test_mask = tags == test_tag
+
+    if train_mask.sum() == 0 or test_mask.sum() == 0:
+        return None, {
+            "status": "skipped",
+            "reason": "empty train/test split from source tags",
+        }
+
+    X_train, y_train = X_selected[train_mask], y_true[train_mask]
+    X_test, y_test = X_selected[test_mask], y_true[test_mask]
+
+    if len(np.unique(y_train)) < 2 or len(np.unique(y_test)) < 2:
+        return None, {
+            "status": "skipped",
+            "reason": "single-class train/test partition",
+        }
+
+    pipe = Pipeline([
+        ("scaler", StandardScaler()),
+        ("lr", clone(model)),
+    ])
+    pipe.fit(X_train, y_train)
+    y_prob_test = pipe.predict_proba(X_test)[:, 1]
+    metrics = compute_classification_metrics(y_test, y_prob_test, threshold=threshold)
+    ece, calib_rows = expected_calibration_error(y_test, y_prob_test, n_bins=10)
+    metrics["ece"] = ece
+
+    return (
+        {
+            "train_tag": train_tag,
+            "test_tag": test_tag,
+            "n_train": int(train_mask.sum()),
+            "n_test": int(test_mask.sum()),
+            "metrics": metrics,
+            "calibration_bins": calib_rows,
+        },
+        {"status": "executed", "reason": None},
+    )
+
+
 def run_diagnostics(
     dataset_path,
     model_path,
@@ -236,6 +308,7 @@ def run_diagnostics(
     threshold=0.5,
     topk_influential=250,
     use_statsmodels=True,
+    eval_protocol="random",
 ):
     """Run LR diagnostics and write summary artifacts."""
     dataset_path = resolve_existing_path(dataset_path, [DEFAULT_DATASET])
@@ -257,6 +330,7 @@ def run_diagnostics(
     X_full = data["X"]
     y = data["y"].astype(int)
     all_feature_names = [str(f) for f in data["feature_names"]]
+    source_split_tag = data["source_split_tag"] if "source_split_tag" in data else None
 
     indices = [all_feature_names.index(f) for f in selected_features]
     X_selected = X_full[:, indices]
@@ -264,12 +338,51 @@ def run_diagnostics(
     X_scaled = scaler.transform(X_selected)
     y_prob_in_sample = model.predict_proba(X_scaled)[:, 1]
 
-    # OOF metrics are more realistic for reporting.
-    y_prob_oof = build_oof_probabilities(X_selected, y, model)
+    protocol_status = {}
+    random_metrics = None
+    random_calib_rows = []
+    source_holdout_result = None
+    source_metrics = None
+    source_calib_rows = []
 
-    metrics = compute_classification_metrics(y, y_prob_oof, threshold=threshold)
-    ece, calib_rows = expected_calibration_error(y, y_prob_oof, n_bins=10)
-    metrics["ece"] = ece
+    if eval_protocol in ("random", "both"):
+        y_prob_oof = build_oof_probabilities(X_selected, y, model)
+        random_metrics = compute_classification_metrics(y, y_prob_oof, threshold=threshold)
+        ece, random_calib_rows = expected_calibration_error(y, y_prob_oof, n_bins=10)
+        random_metrics["ece"] = ece
+        protocol_status["random"] = {"status": "executed", "reason": None}
+    else:
+        protocol_status["random"] = {"status": "skipped", "reason": "excluded by eval_protocol"}
+
+    if eval_protocol in ("source_holdout", "both"):
+        source_holdout_result, source_status = compute_source_holdout_metrics(
+            X_selected=X_selected,
+            y_true=y,
+            source_split_tag=source_split_tag,
+            model=model,
+            threshold=threshold,
+        )
+        protocol_status["source_holdout"] = source_status
+        if source_holdout_result is not None:
+            source_metrics = source_holdout_result["metrics"]
+            source_calib_rows = source_holdout_result["calibration_bins"]
+    else:
+        protocol_status["source_holdout"] = {"status": "skipped", "reason": "excluded by eval_protocol"}
+
+    # Fallback for robustness: keep producing diagnostics even when requested holdout cannot run.
+    if random_metrics is None and source_metrics is None:
+        y_prob_oof = build_oof_probabilities(X_selected, y, model)
+        random_metrics = compute_classification_metrics(y, y_prob_oof, threshold=threshold)
+        ece, random_calib_rows = expected_calibration_error(y, y_prob_oof, n_bins=10)
+        random_metrics["ece"] = ece
+        protocol_status["random"] = {
+            "status": "executed",
+            "reason": "fallback because no requested protocol was executable",
+        }
+
+    primary_protocol = "random" if random_metrics is not None else "source_holdout"
+    metrics = random_metrics if primary_protocol == "random" else source_metrics
+    calib_rows = random_calib_rows if primary_protocol == "random" else source_calib_rows
 
     infl = compute_influence(X_scaled, y, y_prob_in_sample, use_statsmodels=use_statsmodels)
     leverage = infl["leverage"]
@@ -316,6 +429,9 @@ def run_diagnostics(
         "n_samples": int(n),
         "n_features_full": int(X_full.shape[1]),
         "n_features_model": int(X_selected.shape[1]),
+        "eval_protocol": eval_protocol,
+        "primary_metrics_protocol": primary_protocol,
+        "protocol_status": protocol_status,
         "influence_method": infl["method"],
         "thresholds": {
             "classification_threshold": float(threshold),
@@ -324,6 +440,14 @@ def run_diagnostics(
             "std_residual_threshold": float(res_thr),
         },
         "metrics_oof": metrics,
+        "metrics_random": random_metrics,
+        "metrics_source_holdout": source_metrics,
+        "source_holdout_split": None if source_holdout_result is None else {
+            "train_tag": source_holdout_result["train_tag"],
+            "test_tag": source_holdout_result["test_tag"],
+            "n_train": source_holdout_result["n_train"],
+            "n_test": source_holdout_result["n_test"],
+        },
         "calibration_bins": calib_rows,
         "influence_summary": {
             "cook_flag_count": int(sum(r["cook_flag"] for r in influence_rows)),
@@ -333,6 +457,20 @@ def run_diagnostics(
         },
         "shortcut_risk_top_features": shortcut_rows,
     }
+    if random_metrics is not None and source_metrics is not None:
+        metrics_payload["leakage_gap"] = {
+            "roc_auc_random_minus_source_holdout": float(
+                random_metrics["roc_auc"] - source_metrics["roc_auc"]
+            ),
+            "pr_auc_random_minus_source_holdout": float(
+                random_metrics["pr_auc"] - source_metrics["pr_auc"]
+            ),
+            "ece_random_minus_source_holdout": float(
+                random_metrics["ece"] - source_metrics["ece"]
+            ),
+        }
+    else:
+        metrics_payload["leakage_gap"] = None
 
     metrics_path.write_text(json.dumps(metrics_payload, indent=2))
 
@@ -362,6 +500,8 @@ def run_diagnostics(
         f"- Full feature count: {X_full.shape[1]}",
         f"- Model feature count: {X_selected.shape[1]}",
         f"- Influence method: `{infl['method']}`",
+        f"- Eval protocol: `{eval_protocol}`",
+        f"- Primary metrics protocol: `{primary_protocol}`",
         "",
         "## OOF Metrics",
         "",
@@ -374,6 +514,11 @@ def run_diagnostics(
         f"- Specificity: {metrics['specificity']:.6f}",
         f"- F1: {metrics['f1']:.6f}",
         f"- ECE: {metrics['ece']:.6f}",
+        "",
+        "## Protocol Status",
+        "",
+        f"- Random: {protocol_status['random']['status']} ({protocol_status['random']['reason']})",
+        f"- Source-holdout: {protocol_status['source_holdout']['status']} ({protocol_status['source_holdout']['reason']})",
         "",
         "## Influence Summary",
         "",
@@ -391,6 +536,17 @@ def run_diagnostics(
         summary_lines.append(
             f"| {row['feature']} | {row['abs_corr']:.4f} | {row['ks']:.4f} | {row['risk_score']:.4f} |"
         )
+
+    if metrics_payload["leakage_gap"] is not None:
+        gap = metrics_payload["leakage_gap"]
+        summary_lines.extend([
+            "",
+            "## Leakage Gap (Random vs Source-Holdout)",
+            "",
+            f"- ROC-AUC gap: {gap['roc_auc_random_minus_source_holdout']:.6f}",
+            f"- PR-AUC gap: {gap['pr_auc_random_minus_source_holdout']:.6f}",
+            f"- ECE gap: {gap['ece_random_minus_source_holdout']:.6f}",
+        ])
 
     summary_lines.extend([
         "",
@@ -420,6 +576,12 @@ def parse_args():
                         help="Classification threshold for confusion metrics")
     parser.add_argument("--topk-influential", type=int, default=250,
                         help="Number of top Cook's distance rows to export")
+    parser.add_argument(
+        "--eval-protocol",
+        choices=["random", "source_holdout", "both"],
+        default="random",
+        help="Evaluation protocol for classification/calibration metrics.",
+    )
     return parser.parse_args()
 
 
@@ -432,6 +594,7 @@ def main():
         threshold=args.threshold,
         topk_influential=args.topk_influential,
         use_statsmodels=True,
+        eval_protocol=args.eval_protocol,
     )
 
     print("=" * 70)

@@ -1,0 +1,1752 @@
+{
+  "metadata": {
+    "generated_at_utc": "2026-02-19T01:04:57.504929+00:00",
+    "checkpoint_path": "/home/raswanth/I24/I24-postprocessing-lite/models/outputs/transformer_stitch_model.pth",
+    "audit_scenario": "i",
+    "num_records_collected": 53343,
+    "num_candidate_rows_valid_costs": 36287,
+    "num_candidate_rows_with_gt": 35283,
+    "num_anchors_with_known_gt": 731,
+    "eligible_anchor_count": 474,
+    "params": {
+      "audit_min_candidates": 2,
+      "audit_go_lift_threshold": 0.15,
+      "scale_factor": 5.0,
+      "time_penalty": 0.1,
+      "similarity_mapping": "linear",
+      "similarity_power": 1.0,
+      "similarity_clip_eps": 0.01,
+      "audit_max_pairs": 0
+    },
+    "plots": {
+      "anchor_error_bar": "models/outputs/transformer_complementarity_anchor_error_bar.png",
+      "gap_slices": "models/outputs/transformer_complementarity_gap_slices.png"
+    }
+  },
+  "overall_metrics": {
+    "num_anchors": 474,
+    "bhat_top1_error_count": 4,
+    "tx_top1_error_count": 89,
+    "bhat_top1_error_rate": 0.008438818565400843,
+    "tx_top1_error_rate": 0.1877637130801688,
+    "edge_error_lift": -21.250000000000004,
+    "bhat_failure_recovery_count": 1,
+    "bhat_failure_recovery_rate": 0.25,
+    "tx_regression_on_bhat_correct_count": 86,
+    "tx_regression_rate_on_bhat_correct": 0.1829787234042553,
+    "bhat_wrong_anchor_ids": [
+      "local_2212",
+      "local_3213",
+      "local_3743",
+      "local_4091"
+    ],
+    "tx_wrong_anchor_ids": [
+      "local_172",
+      "local_198",
+      "local_249",
+      "local_253",
+      "local_338",
+      "local_353",
+      "local_429",
+      "local_443",
+      "local_555",
+      "local_655",
+      "local_874",
+      "local_1569",
+      "local_1676",
+      "local_1720",
+      "local_1774",
+      "local_1897",
+      "local_1907",
+      "local_2014",
+      "local_2048",
+      "local_2091",
+      "local_2212",
+      "local_2314",
+      "local_2333",
+      "local_2390",
+      "local_2420",
+      "local_2534",
+      "local_2608",
+      "local_2895",
+      "local_2899",
+      "local_2992",
+      "local_3002",
+      "local_3009",
+      "local_3026",
+      "local_3127",
+      "local_3148",
+      "local_3177",
+      "local_3272",
+      "local_3330",
+      "local_3444",
+      "local_3462",
+      "local_3547",
+      "local_3595",
+      "local_3805",
+      "local_3804",
+      "local_3835",
+      "local_3919",
+      "local_3958",
+      "local_3961",
+      "local_4003",
+      "local_297",
+      "local_311",
+      "local_350",
+      "local_389",
+      "local_559",
+      "local_936",
+      "local_979",
+      "local_1257",
+      "local_1360",
+      "local_1518",
+      "local_1547",
+      "local_1778",
+      "local_1809",
+      "local_1816",
+      "local_1846",
+      "local_1851",
+      "local_1949",
+      "local_2082",
+      "local_2124",
+      "local_2312",
+      "local_2421",
+      "local_2483",
+      "local_2786",
+      "local_2805",
+      "local_2808",
+      "local_3033",
+      "local_3094",
+      "local_3213",
+      "local_3342",
+      "local_3367",
+      "local_3442",
+      "local_3503",
+      "local_3544",
+      "local_3646",
+      "local_3776",
+      "local_3784",
+      "local_3858",
+      "local_3959",
+      "local_4059",
+      "local_4091"
+    ],
+    "bhat_wrong_tx_right_anchor_ids": [
+      "local_3743"
+    ],
+    "bhat_right_tx_wrong_anchor_ids": [
+      "local_172",
+      "local_198",
+      "local_249",
+      "local_253",
+      "local_338",
+      "local_353",
+      "local_429",
+      "local_443",
+      "local_555",
+      "local_655",
+      "local_874",
+      "local_1569",
+      "local_1676",
+      "local_1720",
+      "local_1774",
+      "local_1897",
+      "local_1907",
+      "local_2014",
+      "local_2048",
+      "local_2091",
+      "local_2314",
+      "local_2333",
+      "local_2390",
+      "local_2420",
+      "local_2534",
+      "local_2608",
+      "local_2895",
+      "local_2899",
+      "local_2992",
+      "local_3002",
+      "local_3009",
+      "local_3026",
+      "local_3127",
+      "local_3148",
+      "local_3177",
+      "local_3272",
+      "local_3330",
+      "local_3444",
+      "local_3462",
+      "local_3547",
+      "local_3595",
+      "local_3805",
+      "local_3804",
+      "local_3835",
+      "local_3919",
+      "local_3958",
+      "local_3961",
+      "local_4003",
+      "local_297",
+      "local_311",
+      "local_350",
+      "local_389",
+      "local_559",
+      "local_936",
+      "local_979",
+      "local_1257",
+      "local_1360",
+      "local_1518",
+      "local_1547",
+      "local_1778",
+      "local_1809",
+      "local_1816",
+      "local_1846",
+      "local_1851",
+      "local_1949",
+      "local_2082",
+      "local_2124",
+      "local_2312",
+      "local_2421",
+      "local_2483",
+      "local_2786",
+      "local_2805",
+      "local_2808",
+      "local_3033",
+      "local_3094",
+      "local_3342",
+      "local_3367",
+      "local_3442",
+      "local_3503",
+      "local_3544",
+      "local_3646",
+      "local_3776",
+      "local_3784",
+      "local_3858",
+      "local_3959",
+      "local_4059"
+    ]
+  },
+  "pair_level_metrics": {
+    "bhat": {
+      "num_pairs": 35283,
+      "roc_auc": 0.995678002577473,
+      "avg_precision": 0.9197404387131174
+    },
+    "transformer": {
+      "num_pairs": 35283,
+      "roc_auc": 0.8585565580453864,
+      "avg_precision": 0.4857111794754122
+    }
+  },
+  "slice_metrics": {
+    "gap_bins": {
+      "0-2": {
+        "num_anchors": 391,
+        "bhat_top1_error_count": 1,
+        "tx_top1_error_count": 43,
+        "bhat_top1_error_rate": 0.0025575447570332483,
+        "tx_top1_error_rate": 0.10997442455242967,
+        "edge_error_lift": -42.0,
+        "bhat_failure_recovery_count": 1,
+        "bhat_failure_recovery_rate": 1.0,
+        "tx_regression_on_bhat_correct_count": 43,
+        "tx_regression_rate_on_bhat_correct": 0.11025641025641025
+      },
+      "2-5": {
+        "num_anchors": 69,
+        "bhat_top1_error_count": 1,
+        "tx_top1_error_count": 32,
+        "bhat_top1_error_rate": 0.014492753623188406,
+        "tx_top1_error_rate": 0.463768115942029,
+        "edge_error_lift": -31.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 31,
+        "tx_regression_rate_on_bhat_correct": 0.45588235294117646
+      },
+      "5-15": {
+        "num_anchors": 14,
+        "bhat_top1_error_count": 2,
+        "tx_top1_error_count": 14,
+        "bhat_top1_error_rate": 0.14285714285714285,
+        "tx_top1_error_rate": 1.0,
+        "edge_error_lift": -6.000000000000001,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 12,
+        "tx_regression_rate_on_bhat_correct": 1.0
+      },
+      "other": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      }
+    },
+    "candidate_count_bins": {
+      "2": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "3-4": {
+        "num_anchors": 0,
+        "bhat_top1_error_count": 0,
+        "tx_top1_error_count": 0,
+        "bhat_top1_error_rate": 0.0,
+        "tx_top1_error_rate": 0.0,
+        "edge_error_lift": 0.0,
+        "bhat_failure_recovery_count": 0,
+        "bhat_failure_recovery_rate": 0.0,
+        "tx_regression_on_bhat_correct_count": 0,
+        "tx_regression_rate_on_bhat_correct": 0.0
+      },
+      "5+": {
+        "num_anchors": 474,
+        "bhat_top1_error_count": 4,
+        "tx_top1_error_count": 89,
+        "bhat_top1_error_rate": 0.008438818565400843,
+        "tx_top1_error_rate": 0.1877637130801688,
+        "edge_error_lift": -21.250000000000004,
+        "bhat_failure_recovery_count": 1,
+        "bhat_failure_recovery_rate": 0.25,
+        "tx_regression_on_bhat_correct_count": 86,
+        "tx_regression_rate_on_bhat_correct": 0.1829787234042553
+      }
+    }
+  },
+  "error_sets": {
+    "bhat_wrong_tx_right_anchor_ids": [
+      "local_3743"
+    ],
+    "bhat_right_tx_wrong_anchor_ids": [
+      "local_1257",
+      "local_1360",
+      "local_1518",
+      "local_1547",
+      "local_1569",
+      "local_1676",
+      "local_172",
+      "local_1720",
+      "local_1774",
+      "local_1778",
+      "local_1809",
+      "local_1816",
+      "local_1846",
+      "local_1851",
+      "local_1897",
+      "local_1907",
+      "local_1949",
+      "local_198",
+      "local_2014",
+      "local_2048",
+      "local_2082",
+      "local_2091",
+      "local_2124",
+      "local_2312",
+      "local_2314",
+      "local_2333",
+      "local_2390",
+      "local_2420",
+      "local_2421",
+      "local_2483",
+      "local_249",
+      "local_253",
+      "local_2534",
+      "local_2608",
+      "local_2786",
+      "local_2805",
+      "local_2808",
+      "local_2895",
+      "local_2899",
+      "local_297",
+      "local_2992",
+      "local_3002",
+      "local_3009",
+      "local_3026",
+      "local_3033",
+      "local_3094",
+      "local_311",
+      "local_3127",
+      "local_3148",
+      "local_3177",
+      "local_3272",
+      "local_3330",
+      "local_3342",
+      "local_3367",
+      "local_338",
+      "local_3442",
+      "local_3444",
+      "local_3462",
+      "local_350",
+      "local_3503",
+      "local_353",
+      "local_3544",
+      "local_3547",
+      "local_3595",
+      "local_3646",
+      "local_3776",
+      "local_3784",
+      "local_3804",
+      "local_3805",
+      "local_3835",
+      "local_3858",
+      "local_389",
+      "local_3919",
+      "local_3958",
+      "local_3959",
+      "local_3961",
+      "local_4003",
+      "local_4059",
+      "local_429",
+      "local_443",
+      "local_555",
+      "local_559",
+      "local_655",
+      "local_874",
+      "local_936",
+      "local_979"
+    ],
+    "bhat_wrong_tx_right_examples": [
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3505",
+        "bhat_cost": 131.86762408720486,
+        "transformer_cost": 4.973245847970247,
+        "gt_label": 0,
+        "gap": 1.9898366928100586
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3442",
+        "bhat_cost": 17.44578941611692,
+        "transformer_cost": 5.050416943430901,
+        "gt_label": 0,
+        "gap": 2.591787099838257
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3420",
+        "bhat_cost": 81.83718812482385,
+        "transformer_cost": 5.134491871297359,
+        "gt_label": 0,
+        "gap": 2.589836597442627
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3409",
+        "bhat_cost": 54.25874988035077,
+        "transformer_cost": 5.108454497158528,
+        "gt_label": 0,
+        "gap": 2.9234447479248047
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3411",
+        "bhat_cost": 33.00548781766554,
+        "transformer_cost": 0.7606610655784607,
+        "gt_label": 0,
+        "gap": 3.261280059814453
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3367",
+        "bhat_cost": 6.58178465240199,
+        "transformer_cost": 5.098825541883707,
+        "gt_label": 0,
+        "gap": 3.526054859161377
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3342",
+        "bhat_cost": 15.967799510241319,
+        "transformer_cost": 4.988564199209213,
+        "gt_label": 0,
+        "gap": 3.0610511302948
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3325",
+        "bhat_cost": 337.52354170467083,
+        "transformer_cost": 5.064309117756784,
+        "gt_label": 0,
+        "gap": 1.2738404273986816
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3327",
+        "bhat_cost": 53.11893774364388,
+        "transformer_cost": 5.240480092540383,
+        "gt_label": 0,
+        "gap": 3.341763496398926
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3326",
+        "bhat_cost": 78.99289057649541,
+        "transformer_cost": 5.42481646630913,
+        "gt_label": 0,
+        "gap": 4.937774896621704
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3317",
+        "bhat_cost": 1.7227186385164048,
+        "transformer_cost": 5.229174499213696,
+        "gt_label": 0,
+        "gap": 4.720320224761963
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3254",
+        "bhat_cost": 28.111959465521572,
+        "transformer_cost": 5.081562857329845,
+        "gt_label": 0,
+        "gap": 2.7141456604003906
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3246",
+        "bhat_cost": 77.52403353316535,
+        "transformer_cost": 5.530347118899226,
+        "gt_label": 0,
+        "gap": 6.009218215942383
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3238",
+        "bhat_cost": 49.40417813209312,
+        "transformer_cost": 5.528893844038248,
+        "gt_label": 0,
+        "gap": 6.131724834442139
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3213",
+        "bhat_cost": 21.806360354455645,
+        "transformer_cost": 5.293906819820404,
+        "gt_label": 0,
+        "gap": 5.005236387252808
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3160",
+        "bhat_cost": 60.946872327437674,
+        "transformer_cost": 5.024106238037348,
+        "gt_label": 0,
+        "gap": 1.7923498153686523
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3158",
+        "bhat_cost": 60.08227889557682,
+        "transformer_cost": 5.520478641428054,
+        "gt_label": 0,
+        "gap": 5.940906524658203
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3141",
+        "bhat_cost": 19.75230405622116,
+        "transformer_cost": 5.157240020483732,
+        "gt_label": 0,
+        "gap": 3.867136001586914
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3132",
+        "bhat_cost": 3.685082817746576,
+        "transformer_cost": 5.180210543423891,
+        "gt_label": 0,
+        "gap": 3.8532068729400635
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3124",
+        "bhat_cost": 1399.7598704377804,
+        "transformer_cost": 4.921370237320661,
+        "gt_label": 0,
+        "gap": 0.6738405227661133
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3123",
+        "bhat_cost": 189.89454926939524,
+        "transformer_cost": 5.156194407865405,
+        "gt_label": 0,
+        "gap": 2.4738404750823975
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3116",
+        "bhat_cost": 2881.6560274115664,
+        "transformer_cost": 4.956428785435856,
+        "gt_label": 0,
+        "gap": 0.2723970413208008
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3109",
+        "bhat_cost": 63.605150984013356,
+        "transformer_cost": 5.400385359674692,
+        "gt_label": 0,
+        "gap": 5.12384033203125
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3102",
+        "bhat_cost": 13.306096792419712,
+        "transformer_cost": 5.556701898574829,
+        "gt_label": 0,
+        "gap": 7.197015285491943
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3094",
+        "bhat_cost": 179.92996541191812,
+        "transformer_cost": 5.167634846642613,
+        "gt_label": 0,
+        "gap": 2.87384033203125
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3080",
+        "bhat_cost": 63.673600643812684,
+        "transformer_cost": 5.617091204226017,
+        "gt_label": 0,
+        "gap": 6.8734447956085205
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3055",
+        "bhat_cost": 55.25630198239661,
+        "transformer_cost": 5.77241988684982,
+        "gt_label": 0,
+        "gap": 8.467113256454468
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3047",
+        "bhat_cost": 1.157319510360641,
+        "transformer_cost": 5.567738021165132,
+        "gt_label": 0,
+        "gap": 7.402620077133179
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_3033",
+        "bhat_cost": 5.647508557634624,
+        "transformer_cost": 5.711478066444397,
+        "gt_label": 0,
+        "gap": 8.712590456008911
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2982",
+        "bhat_cost": 19.54856507712477,
+        "transformer_cost": 5.462093476206064,
+        "gt_label": 0,
+        "gap": 6.335692405700684
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2973",
+        "bhat_cost": 40.13696710904641,
+        "transformer_cost": 5.341252385824919,
+        "gt_label": 0,
+        "gap": 4.742349863052368
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2971",
+        "bhat_cost": 57.52373078515032,
+        "transformer_cost": 5.902564718015492,
+        "gt_label": 0,
+        "gap": 9.669896602630615
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2956",
+        "bhat_cost": 39.89669307047945,
+        "transformer_cost": 5.861992382258177,
+        "gt_label": 0,
+        "gap": 9.61368989944458
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2938",
+        "bhat_cost": 47.02515377810986,
+        "transformer_cost": 5.490897079184651,
+        "gt_label": 0,
+        "gap": 5.741755247116089
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2909",
+        "bhat_cost": 50.16007600450135,
+        "transformer_cost": 5.736952783353627,
+        "gt_label": 0,
+        "gap": 8.064226627349854
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2877",
+        "bhat_cost": 133.46368108976685,
+        "transformer_cost": 5.358209980838001,
+        "gt_label": 0,
+        "gap": 4.113840341567993
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2866",
+        "bhat_cost": 56.1959760729914,
+        "transformer_cost": 5.960931616835296,
+        "gt_label": 0,
+        "gap": 10.274438858032227
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2833",
+        "bhat_cost": 1.8911867796245712,
+        "transformer_cost": 0.1896942973136902,
+        "gt_label": 1,
+        "gap": 1.0127885341644287
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2808",
+        "bhat_cost": 101.58821593676673,
+        "transformer_cost": 5.669672727584839,
+        "gt_label": 0,
+        "gap": 7.196727275848389
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2805",
+        "bhat_cost": 51.81409177884083,
+        "transformer_cost": 5.856968967616558,
+        "gt_label": 0,
+        "gap": 9.209902048110962
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2786",
+        "bhat_cost": 62.74743016621421,
+        "transformer_cost": 6.026860778592527,
+        "gt_label": 0,
+        "gap": 10.813840389251709
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2780",
+        "bhat_cost": 7.642884170093627,
+        "transformer_cost": 5.878658460453153,
+        "gt_label": 0,
+        "gap": 10.072619915008545
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2763",
+        "bhat_cost": 42.594860285784215,
+        "transformer_cost": 5.364051645994186,
+        "gt_label": 0,
+        "gap": 6.856623649597168
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2746",
+        "bhat_cost": 50.689684417752574,
+        "transformer_cost": 6.144859219901264,
+        "gt_label": 0,
+        "gap": 12.072961330413818
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2739",
+        "bhat_cost": 47.04945480307577,
+        "transformer_cost": 5.641049929149449,
+        "gt_label": 0,
+        "gap": 7.141147136688232
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2738",
+        "bhat_cost": 17.70971509904031,
+        "transformer_cost": 5.7718471474945545,
+        "gt_label": 0,
+        "gap": 8.812246322631836
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2729",
+        "bhat_cost": 3.600613711303217,
+        "transformer_cost": 5.734535951167345,
+        "gt_label": 0,
+        "gap": 9.412806034088135
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2722",
+        "bhat_cost": 86.93471941169132,
+        "transformer_cost": 5.910384035110474,
+        "gt_label": 0,
+        "gap": 9.603840351104736
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2699",
+        "bhat_cost": 268.67428637512484,
+        "transformer_cost": 5.134314548224211,
+        "gt_label": 0,
+        "gap": 2.012397050857544
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2689",
+        "bhat_cost": 58.60858151719572,
+        "transformer_cost": 6.077672123908997,
+        "gt_label": 0,
+        "gap": 11.276721239089966
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2664",
+        "bhat_cost": 81.52539008820929,
+        "transformer_cost": 6.051384043693543,
+        "gt_label": 0,
+        "gap": 11.013840436935425
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2631",
+        "bhat_cost": 11.250381102367195,
+        "transformer_cost": 5.8097839944064615,
+        "gt_label": 0,
+        "gap": 9.21309518814087
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2609",
+        "bhat_cost": 78.2704301839004,
+        "transformer_cost": 5.601306689344346,
+        "gt_label": 0,
+        "gap": 6.719510316848755
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2603",
+        "bhat_cost": 77.91214066263035,
+        "transformer_cost": 5.763528394699097,
+        "gt_label": 0,
+        "gap": 8.135283946990967
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2597",
+        "bhat_cost": 2.1381867396384333,
+        "transformer_cost": 5.732661239802837,
+        "gt_label": 0,
+        "gap": 8.47713589668274
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2596",
+        "bhat_cost": 71.02366032795065,
+        "transformer_cost": 6.382384037971497,
+        "gt_label": 0,
+        "gap": 14.323840379714966
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2592",
+        "bhat_cost": 36.37116512288661,
+        "transformer_cost": 5.795144478976726,
+        "gt_label": 0,
+        "gap": 9.010802984237671
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2563",
+        "bhat_cost": 8.666247277440899,
+        "transformer_cost": 6.328715634532273,
+        "gt_label": 0,
+        "gap": 13.81382703781128
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2561",
+        "bhat_cost": 35.101061262143304,
+        "transformer_cost": 5.944948063418269,
+        "gt_label": 0,
+        "gap": 10.40094780921936
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2540",
+        "bhat_cost": 79.36293147275605,
+        "transformer_cost": 6.389384055137635,
+        "gt_label": 0,
+        "gap": 14.393840551376343
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2535",
+        "bhat_cost": 3.194493785410595,
+        "transformer_cost": 6.290295005589724,
+        "gt_label": 0,
+        "gap": 13.788393259048462
+      },
+      {
+        "anchor_id": "local_3743",
+        "candidate_id": "local_2523",
+        "bhat_cost": 25.238341936706824,
+        "transformer_cost": 6.109521759673953,
+        "gt_label": 0,
+        "gap": 11.865485906600952
+      }
+    ],
+    "bhat_right_tx_wrong_examples": [
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1202",
+        "bhat_cost": 4.797880246764917,
+        "transformer_cost": 3.557284390926361,
+        "gt_label": 0,
+        "gap": 0.6700000762939453
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1110",
+        "bhat_cost": 1179.369819273701,
+        "transformer_cost": 4.927361022680998,
+        "gt_label": 0,
+        "gap": 0.3391551971435547
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1106",
+        "bhat_cost": 7731.872900353693,
+        "transformer_cost": 4.939023180305957,
+        "gt_label": 0,
+        "gap": 0.2719554901123047
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1097",
+        "bhat_cost": 753.579903189983,
+        "transformer_cost": 4.424050733447075,
+        "gt_label": 0,
+        "gap": 0.8690690994262695
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1087",
+        "bhat_cost": 582.6006856254809,
+        "transformer_cost": 4.904462007433176,
+        "gt_label": 0,
+        "gap": 0.9293582439422607
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1082",
+        "bhat_cost": 14.92799295271766,
+        "transformer_cost": 5.513896560668946,
+        "gt_label": 0,
+        "gap": 5.638965606689453
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1073",
+        "bhat_cost": 9.3467115929585,
+        "transformer_cost": 5.068700243532658,
+        "gt_label": 0,
+        "gap": 6.244738817214966
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1071",
+        "bhat_cost": 15.91682492622605,
+        "transformer_cost": 5.472123082354665,
+        "gt_label": 0,
+        "gap": 5.7389655113220215
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1070",
+        "bhat_cost": 22.031911590912973,
+        "transformer_cost": 5.351586528122425,
+        "gt_label": 0,
+        "gap": 5.990326404571533
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1068",
+        "bhat_cost": 15.297135164534582,
+        "transformer_cost": 5.3316168885678055,
+        "gt_label": 0,
+        "gap": 4.868862152099609
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1069",
+        "bhat_cost": 248.7945723302959,
+        "transformer_cost": 0.30503594875335693,
+        "gt_label": 0,
+        "gap": 0.7400000095367432
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1067",
+        "bhat_cost": 30.951589800279883,
+        "transformer_cost": 5.373775460571051,
+        "gt_label": 0,
+        "gap": 5.327113389968872
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1057",
+        "bhat_cost": 22.565217566761174,
+        "transformer_cost": 5.523288083076477,
+        "gt_label": 0,
+        "gap": 5.7328808307647705
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1052",
+        "bhat_cost": 5.8858533116650955,
+        "transformer_cost": 4.895366592705249,
+        "gt_label": 0,
+        "gap": 3.517925500869751
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1033",
+        "bhat_cost": 19.234159920369887,
+        "transformer_cost": 5.243392938748002,
+        "gt_label": 0,
+        "gap": 3.849745988845825
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1018",
+        "bhat_cost": 29.993890101603256,
+        "transformer_cost": 5.0235670253634455,
+        "gt_label": 0,
+        "gap": 4.1346354484558105
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_1001",
+        "bhat_cost": 12.606836353539304,
+        "transformer_cost": 5.8474173039197925,
+        "gt_label": 0,
+        "gap": 9.185996294021606
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_993",
+        "bhat_cost": 0.2896046527396914,
+        "transformer_cost": 0.34980230331420903,
+        "gt_label": 1,
+        "gap": 2.368264675140381
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_979",
+        "bhat_cost": 5.056726352845658,
+        "transformer_cost": 5.208961047232151,
+        "gt_label": 0,
+        "gap": 5.339952707290649
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_975",
+        "bhat_cost": 26.40892135744934,
+        "transformer_cost": 5.727323373407126,
+        "gt_label": 0,
+        "gap": 8.060473442077637
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_952",
+        "bhat_cost": 15.012537746911857,
+        "transformer_cost": 5.674931951239705,
+        "gt_label": 0,
+        "gap": 7.968556642532349
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_942",
+        "bhat_cost": 48.49013719950032,
+        "transformer_cost": 5.108182918280363,
+        "gt_label": 0,
+        "gap": 2.378556728363037
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_936",
+        "bhat_cost": 3.342156046182083,
+        "transformer_cost": 5.950537548214197,
+        "gt_label": 0,
+        "gap": 10.738758563995361
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_931",
+        "bhat_cost": 20.919220514588755,
+        "transformer_cost": 5.987277007102967,
+        "gt_label": 0,
+        "gap": 10.372770071029663
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_932",
+        "bhat_cost": 29.442618036947216,
+        "transformer_cost": 5.722545443475246,
+        "gt_label": 0,
+        "gap": 9.578556776046753
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_901",
+        "bhat_cost": 2.7454740932278283,
+        "transformer_cost": 5.430445586144924,
+        "gt_label": 0,
+        "gap": 7.6345319747924805
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_889",
+        "bhat_cost": 1.060564486538668,
+        "transformer_cost": 5.875624593347311,
+        "gt_label": 1,
+        "gap": 10.565872192382812
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_856",
+        "bhat_cost": 5.617903864289329,
+        "transformer_cost": 6.149923009797931,
+        "gt_label": 0,
+        "gap": 12.601852416992188
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_850",
+        "bhat_cost": 1.208822034019913,
+        "transformer_cost": 5.6785941906273365,
+        "gt_label": 0,
+        "gap": 8.844635486602783
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_788",
+        "bhat_cost": 24.826651799180848,
+        "transformer_cost": 6.043439328670502,
+        "gt_label": 0,
+        "gap": 11.115975379943848
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_773",
+        "bhat_cost": 3.6808245455265234,
+        "transformer_cost": 5.743285258859396,
+        "gt_label": 0,
+        "gap": 8.988646507263184
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_757",
+        "bhat_cost": 52.05678715595674,
+        "transformer_cost": 4.902753028273582,
+        "gt_label": 0,
+        "gap": 2.7200000286102295
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_732",
+        "bhat_cost": 9.900891557925547,
+        "transformer_cost": 6.284368157945574,
+        "gt_label": 0,
+        "gap": 13.604552984237671
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_721",
+        "bhat_cost": 37.184491514427734,
+        "transformer_cost": 6.416855669021607,
+        "gt_label": 0,
+        "gap": 14.668556690216064
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_707",
+        "bhat_cost": 5.625518138347331,
+        "transformer_cost": 6.388083343021572,
+        "gt_label": 0,
+        "gap": 14.604699850082397
+      },
+      {
+        "anchor_id": "local_1257",
+        "candidate_id": "local_701",
+        "bhat_cost": 19.52282349080975,
+        "transformer_cost": 5.367582665011287,
+        "gt_label": 0,
+        "gap": 4.847169399261475
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1324",
+        "bhat_cost": 1180.6902117729262,
+        "transformer_cost": 4.895587278157473,
+        "gt_label": 0,
+        "gap": 0.20407581329345703
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1299",
+        "bhat_cost": 0.12073094012209425,
+        "transformer_cost": 0.14563567638397218,
+        "gt_label": 1,
+        "gap": 0.5985565185546875
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1257",
+        "bhat_cost": 5.200620780718658,
+        "transformer_cost": 2.114856719970703,
+        "gt_label": 0,
+        "gap": 0.5385565757751465
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1202",
+        "bhat_cost": 0.41462566899211184,
+        "transformer_cost": 0.4397929310798645,
+        "gt_label": 1,
+        "gap": 2.80855655670166
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1181",
+        "bhat_cost": 3860.7577887198872,
+        "transformer_cost": 4.782183113694191,
+        "gt_label": 0,
+        "gap": 0.39896535873413086
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1150",
+        "bhat_cost": 47.356863024597494,
+        "transformer_cost": 3.569126123189926,
+        "gt_label": 0,
+        "gap": 1.1399998664855957
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1135",
+        "bhat_cost": 12292.623508775676,
+        "transformer_cost": 4.896592347323894,
+        "gt_label": 0,
+        "gap": 0.19607877731323242
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1131",
+        "bhat_cost": 9.919865811101968,
+        "transformer_cost": 4.917375244945288,
+        "gt_label": 0,
+        "gap": 1.2100000381469727
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1118",
+        "bhat_cost": 5230.718497994471,
+        "transformer_cost": 0.1343265175819397,
+        "gt_label": 0,
+        "gap": 0.0
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1113",
+        "bhat_cost": 13.240226370846203,
+        "transformer_cost": 5.105999895371497,
+        "gt_label": 0,
+        "gap": 1.7385566234588623
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1110",
+        "bhat_cost": 51.67354893099079,
+        "transformer_cost": 5.152907944843173,
+        "gt_label": 0,
+        "gap": 2.4777116775512695
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1106",
+        "bhat_cost": 285.0593875654405,
+        "transformer_cost": 5.191051197052002,
+        "gt_label": 0,
+        "gap": 2.4105119705200195
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1097",
+        "bhat_cost": 84.73462343843121,
+        "transformer_cost": 5.095272359997034,
+        "gt_label": 0,
+        "gap": 3.0076255798339844
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1087",
+        "bhat_cost": 88.98394785261205,
+        "transformer_cost": 5.218207459151745,
+        "gt_label": 0,
+        "gap": 3.0679147243499756
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1082",
+        "bhat_cost": 7.603874404656538,
+        "transformer_cost": 5.727752208709717,
+        "gt_label": 0,
+        "gap": 7.777522087097168
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1073",
+        "bhat_cost": 15.3514653023402,
+        "transformer_cost": 5.754050210490822,
+        "gt_label": 0,
+        "gap": 8.38329529762268
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1071",
+        "bhat_cost": 4.2091215663065675,
+        "transformer_cost": 5.703904668986797,
+        "gt_label": 0,
+        "gap": 7.877521991729736
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1070",
+        "bhat_cost": 14.1101116526894,
+        "transformer_cost": 5.751905304938555,
+        "gt_label": 0,
+        "gap": 8.128882884979248
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1068",
+        "bhat_cost": 18.375974179799773,
+        "transformer_cost": 5.629658481478691,
+        "gt_label": 0,
+        "gap": 7.007418632507324
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1069",
+        "bhat_cost": 27.554770280961385,
+        "transformer_cost": 3.1807354927062987,
+        "gt_label": 0,
+        "gap": 2.878556489944458
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1067",
+        "bhat_cost": 21.025113908401018,
+        "transformer_cost": 5.38665629774332,
+        "gt_label": 0,
+        "gap": 7.465669870376587
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1057",
+        "bhat_cost": 9.205622670489905,
+        "transformer_cost": 5.737143731117249,
+        "gt_label": 0,
+        "gap": 7.871437311172485
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1052",
+        "bhat_cost": 0.8175805559126188,
+        "transformer_cost": 3.82052806019783,
+        "gt_label": 1,
+        "gap": 5.656481981277466
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1033",
+        "bhat_cost": 6.068757557589007,
+        "transformer_cost": 5.39948251247406,
+        "gt_label": 0,
+        "gap": 5.98830246925354
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1018",
+        "bhat_cost": 12.324517274297179,
+        "transformer_cost": 5.481842983886599,
+        "gt_label": 0,
+        "gap": 6.273191928863525
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_1001",
+        "bhat_cost": 30.04388614696782,
+        "transformer_cost": 6.082455277442932,
+        "gt_label": 0,
+        "gap": 11.324552774429321
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_993",
+        "bhat_cost": 5.597338134016659,
+        "transformer_cost": 5.026852969825268,
+        "gt_label": 0,
+        "gap": 4.506821155548096
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_988",
+        "bhat_cost": 3.4162628554075956,
+        "transformer_cost": 0.3809950590133667,
+        "gt_label": 0,
+        "gap": 0.938556432723999
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_979",
+        "bhat_cost": 1.3084129882586817,
+        "transformer_cost": 5.349930533766747,
+        "gt_label": 0,
+        "gap": 7.478509187698364
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_975",
+        "bhat_cost": 11.582556711775965,
+        "transformer_cost": 5.961213879473507,
+        "gt_label": 0,
+        "gap": 10.199029922485352
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_952",
+        "bhat_cost": 14.04434103474242,
+        "transformer_cost": 5.841305039823055,
+        "gt_label": 0,
+        "gap": 10.107113122940063
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_942",
+        "bhat_cost": 36.49354802999671,
+        "transformer_cost": 5.354587927088142,
+        "gt_label": 0,
+        "gap": 4.517113208770752
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_936",
+        "bhat_cost": 2.308168241475527,
+        "transformer_cost": 6.207287967577576,
+        "gt_label": 0,
+        "gap": 12.877315044403076
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_931",
+        "bhat_cost": 7.391044121418368,
+        "transformer_cost": 6.201132655143738,
+        "gt_label": 0,
+        "gap": 12.511326551437378
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_932",
+        "bhat_cost": 34.63674156751668,
+        "transformer_cost": 6.062088884413242,
+        "gt_label": 0,
+        "gap": 11.717113256454468
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_901",
+        "bhat_cost": 8.258820124616395,
+        "transformer_cost": 5.898450270667672,
+        "gt_label": 0,
+        "gap": 9.773088455200195
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_889",
+        "bhat_cost": 5.274547687374185,
+        "transformer_cost": 6.210627035796643,
+        "gt_label": 0,
+        "gap": 12.704428672790527
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_856",
+        "bhat_cost": 3.131746721058713,
+        "transformer_cost": 6.404945183172822,
+        "gt_label": 0,
+        "gap": 14.740408897399902
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_850",
+        "bhat_cost": 3.8067312632377774,
+        "transformer_cost": 6.0270861001685265,
+        "gt_label": 0,
+        "gap": 10.983191967010498
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_788",
+        "bhat_cost": 11.147200446323907,
+        "transformer_cost": 6.2564033703878525,
+        "gt_label": 0,
+        "gap": 13.254531860351562
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_773",
+        "bhat_cost": 1.259477126001277,
+        "transformer_cost": 6.007789106294513,
+        "gt_label": 1,
+        "gap": 11.127202987670898
+      },
+      {
+        "anchor_id": "local_1360",
+        "candidate_id": "local_757",
+        "bhat_cost": 16.454995668216984,
+        "transformer_cost": 2.0409762978553774,
+        "gt_label": 0,
+        "gap": 4.858556509017944
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1443",
+        "bhat_cost": 0.3103853306438263,
+        "transformer_cost": 0.1432295083999634,
+        "gt_label": 1,
+        "gap": 0.8614435195922852
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1381",
+        "bhat_cost": 263.47238959743817,
+        "transformer_cost": 4.689074170589447,
+        "gt_label": 0,
+        "gap": 0.5356700420379639
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1360",
+        "bhat_cost": 48.291443720499444,
+        "transformer_cost": 4.900789653509856,
+        "gt_label": 0,
+        "gap": 1.1414434909820557
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1324",
+        "bhat_cost": 18.812023414412877,
+        "transformer_cost": 5.094920460134745,
+        "gt_label": 0,
+        "gap": 3.015519380569458
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1299",
+        "bhat_cost": 8.372983414854032,
+        "transformer_cost": 5.156280483305454,
+        "gt_label": 0,
+        "gap": 3.4100000858306885
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1293",
+        "bhat_cost": 1445.9419324640414,
+        "transformer_cost": 5.011286989226937,
+        "gt_label": 0,
+        "gap": 0.7947216033935547
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1257",
+        "bhat_cost": 24.038073495392673,
+        "transformer_cost": 5.220083507150411,
+        "gt_label": 0,
+        "gap": 3.3500001430511475
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1202",
+        "bhat_cost": 4.819941736679439,
+        "transformer_cost": 5.413060140237212,
+        "gt_label": 0,
+        "gap": 5.620000123977661
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1199",
+        "bhat_cost": 189.7787197268726,
+        "transformer_cost": 5.125785026699305,
+        "gt_label": 0,
+        "gap": 2.2060787677764893
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1181",
+        "bhat_cost": 111.29139092182037,
+        "transformer_cost": 5.235003105923534,
+        "gt_label": 0,
+        "gap": 3.210408926010132
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1153",
+        "bhat_cost": 15.525323864940793,
+        "transformer_cost": 4.857237823307514,
+        "gt_label": 0,
+        "gap": 2.2714436054229736
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1152",
+        "bhat_cost": 177.6142573467654,
+        "transformer_cost": 4.976382341980934,
+        "gt_label": 0,
+        "gap": 0.5356700420379639
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1150",
+        "bhat_cost": 35.76370135818653,
+        "transformer_cost": 5.282740851864219,
+        "gt_label": 0,
+        "gap": 3.9514434337615967
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1135",
+        "bhat_cost": 219.57947985974798,
+        "transformer_cost": 5.250752234458924,
+        "gt_label": 0,
+        "gap": 3.0075223445892334
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1131",
+        "bhat_cost": 8.93795896550366,
+        "transformer_cost": 0.639644730091095,
+        "gt_label": 0,
+        "gap": 4.021443605422974
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1118",
+        "bhat_cost": 31.825492911066224,
+        "transformer_cost": 5.078221777826547,
+        "gt_label": 0,
+        "gap": 2.811443567276001
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1113",
+        "bhat_cost": 10.424446646863462,
+        "transformer_cost": 5.255206050723791,
+        "gt_label": 0,
+        "gap": 4.550000190734863
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1110",
+        "bhat_cost": 10.293770337939923,
+        "transformer_cost": 5.410678135231137,
+        "gt_label": 0,
+        "gap": 5.2891552448272705
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1106",
+        "bhat_cost": 70.3706008775573,
+        "transformer_cost": 5.472195553779602,
+        "gt_label": 0,
+        "gap": 5.2219555377960205
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1099",
+        "bhat_cost": 320.26517965012255,
+        "transformer_cost": 0.07264816761016846,
+        "gt_label": 0,
+        "gap": 0.13000011444091797
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1097",
+        "bhat_cost": 21.6434751181182,
+        "transformer_cost": 5.512910598888993,
+        "gt_label": 0,
+        "gap": 5.819069147109985
+      },
+      {
+        "anchor_id": "local_1518",
+        "candidate_id": "local_1087",
+        "bhat_cost": 49.27847941097434,
+        "transformer_cost": 5.537935829162598,
+        "gt_label": 0,
+        "gap": 5.879358291625977
+      }
+    ]
+  },
+  "decision": {
+    "recommendation": "pivot",
+    "checks": [
+      {
+        "name": "recovery_rate",
+        "pass": true,
+        "actual": 0.25,
+        "threshold": 0.15,
+        "operator": ">="
+      },
+      {
+        "name": "regression_rate",
+        "pass": false,
+        "actual": 0.1829787234042553,
+        "threshold": 0.05,
+        "operator": "<="
+      },
+      {
+        "name": "transformer_vs_bhat_error",
+        "pass": false,
+        "actual": 0.1877637130801688,
+        "threshold": 0.008438818565400843,
+        "operator": "<="
+      }
+    ],
+    "reasons": [
+      "recovery_rate: PASS (0.2500 >= 0.1500)",
+      "regression_rate: FAIL (0.1830 <= 0.0500)",
+      "transformer_vs_bhat_error: FAIL (0.1878 <= 0.0084)"
+    ]
+  }
+}

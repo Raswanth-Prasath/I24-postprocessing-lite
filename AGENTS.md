@@ -78,8 +78,14 @@ python mot_i24.py i
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
-## Open Review Findings (2026-02-12)
+## Resolved Review Findings (2026-02-12)
 
-- [P1] `Logistic Regression/optuna_search_lr.py` (`--keep-best` path): handle legacy best trials that do not contain `use_logit`/`logit_offset` to avoid `KeyError` when using `load_if_exists=True`.
-- [P1] `Logistic Regression/optuna_search_lr.py` (CSV append path): prevent schema drift when new columns are introduced (`use_logit`, `logit_offset`) and output is appended to older CSV files.
-- [P2] `run_experiments.py` (`--all-configs` path): evaluate each generated tag-specific output (for example `REC_i_MLP.json`, `REC_i_TCN.json`) instead of a single per-suffix evaluation call.
+- [P1] `Logistic Regression/optuna_search_lr.py` (`--keep-best` path): legacy best trials now use defaulted `use_logit=False` and `logit_offset=5.0` when fields are absent.
+- [P1] `Logistic Regression/optuna_search_lr.py` (CSV append path): schema guard now writes to a versioned CSV when headers differ, preventing silent column drift.
+- [P2] `run_experiments.py` (`--all-configs` path): `--evaluate` now supports per-run coverage and calls `hota_trackeval.py --gt-file --tracker-file --name` for each generated tagged output.
+
+## Active Follow-Ups (2026-02-12)
+
+- Leakage risk remains high because LR metrics on advanced/v4 variants are near-perfect; keep source-holdout diagnostics in the validation path before promoting new artifacts.
+- `Logistic Regression/generate_evaluation_results.py` now supports `--eval-protocol {random,source_holdout,both}` and performs split-before-scale evaluation to avoid optimistic leakage-prone reporting.
+- Complementarity audit (`models/evaluate_transformer.py --audit-complementarity`) can yield zero eligible anchors on small sampled runs when GT-labeled anchors do not contain both positive and negative candidates; prefer full-pair runs (`--audit-max-pairs 0`) for go/no-go decisions and monitor `eligible_anchor_count`.
