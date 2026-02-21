@@ -43,6 +43,10 @@ Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with lear
 13. **Exact Name Preservation Rule**:
    - If the user specifies a tag or filename spelling, preserve it exactly in commands and follow-up guidance.
 
+14. **Calibration Objective Rule**:
+   - Never use Youden's J (`TPR − FPR`) as the default threshold calibration strategy. It optimises pair-level classification and is too permissive for MCF graph stitching where the neg:pos edge ratio is ~25:1. Use `fpr_ceiling` (default 0.5%) or `precision_floor` instead.
+   - Always report expected false edge count (`FPR × n_neg`) alongside any calibrated threshold.
+
 
 
 ---
@@ -140,7 +144,8 @@ I24-postprocessing-lite/
 ├── Core Pipeline Files
 │   ├── pp_lite.py             # Main orchestrator with --config/--tag CLI (230 lines)
 │   ├── run_experiments.py     # Batch experiment runner (130 lines)
-│   ├── calibrate_threshold.py # Auto stitch_thresh calibration via ROC (~200 lines)
+│   ├── calibrate_threshold.py # Stitch threshold calibration (fpr_ceiling/precision/youden)
+│   ├── sweep_threshold.py     # Two-phase threshold sweep (pair-level → end-to-end HOTA)
 │   ├── merge.py               # Fragment merging (481 lines)
 │   ├── min_cost_flow.py       # Stitch stage (142 lines)
 │   ├── reconciliation.py      # Trajectory smoothing (223 lines)
@@ -185,7 +190,8 @@ I24-postprocessing-lite/
 | **MOT Evaluation** | `mot_i24.py` | ✅ MOTA/MOTP/IDF1 across 3 scenarios |
 | **LR Baseline** | `Logistic Regression/train_torch_lr.py` | ✅ PyTorch implementation |
 | **Config** | `parameters.json` | ✅ cost_function section added |
-| **Threshold Calibration** | `calibrate_threshold.py` | ✅ ROC-based auto-calibration across scenarios |
+| **Threshold Calibration** | `calibrate_threshold.py` | ✅ ROC-based with fpr_ceiling/precision_floor/f_beta/youden strategies |
+| **Threshold Sweep** | `sweep_threshold.py` | ✅ Two-phase: pair-level pre-filter → end-to-end HOTA optimisation |
 
 ### Recently Fixed (Feb 4, 2026)
 
@@ -571,10 +577,24 @@ python evaluate_siamese.py
 
 ### Calibrate Stitch Threshold
 ```bash
-# Find optimal stitch_thresh for a cost function via ROC on GT-labeled pairs
+# Find optimal stitch_thresh via ROC (default: fpr_ceiling at 0.5% FPR)
 python calibrate_threshold.py --config parameters_PINN.json
-python calibrate_threshold.py --config parameters_PINN.json --scenarios i ii
-python calibrate_threshold.py --config parameters.json --scenarios i ii iii
+python calibrate_threshold.py --config parameters_PINN.json --strategy fpr_ceiling --max-fpr 0.01
+python calibrate_threshold.py --config parameters_PINN.json --strategy precision_floor --min-precision 0.995
+python calibrate_threshold.py --config parameters_PINN.json --strategy youden  # legacy (often too permissive)
+```
+
+### Threshold Sweep (end-to-end)
+```bash
+# Two-phase: pair-level pre-filter → pipeline runs optimising HOTA
+python sweep_threshold.py --config parameters_PINN.json --scenarios i
+python sweep_threshold.py --config parameters_PINN.json --scenarios i ii --n-thresholds 10
+
+# Phase 1 only (fast, no pipeline runs)
+python sweep_threshold.py --config parameters_PINN.json --phase1-only
+
+# Explicit thresholds (skip phase 1)
+python sweep_threshold.py --config parameters_PINN.json --thresholds 1.5 2.0 2.5 3.0
 ```
 
 ### PINNv2 Reproducibility + Diagnostics

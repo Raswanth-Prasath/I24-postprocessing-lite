@@ -2,10 +2,17 @@
 """
 Automatic stitch threshold calibration via ROC analysis on GT-labeled fragment pairs.
 
+Strategies:
+    fpr_ceiling     – (default) maximize TPR subject to FPR ≤ --max-fpr (0.5%)
+    precision_floor – maximize recall subject to precision ≥ --min-precision (0.99)
+    f_beta          – maximize F_β score (β < 1 heavily penalises false positives)
+    youden          – maximize TPR − FPR (original, often too permissive for MCF)
+
 Usage:
     python calibrate_threshold.py --config parameters_PINN.json
-    python calibrate_threshold.py --config parameters_PINN.json --scenarios i ii
-    python calibrate_threshold.py --config parameters.json --scenarios i ii iii
+    python calibrate_threshold.py --config parameters_PINN.json --strategy fpr_ceiling --max-fpr 0.01
+    python calibrate_threshold.py --config parameters_PINN.json --strategy precision_floor --min-precision 0.995
+    python calibrate_threshold.py --config parameters_PINN.json --strategy youden
 """
 
 import argparse
@@ -133,8 +140,84 @@ def generate_pairs(fragments: list, time_win: float, max_x_gap: float = 800.0):
             yield frag_a, frag_b, label
 
 
+def select_threshold(
+    fpr, tpr, actual_thresholds, n_pos, n_neg,
+    strategy="fpr_ceiling", max_fpr=0.005, min_precision=0.99, f_beta=0.1,
+):
+    """Select optimal threshold using the specified strategy.
+
+    Strategies:
+        youden       – maximize TPR − FPR (original, permissive)
+        fpr_ceiling  – maximize TPR subject to FPR ≤ max_fpr
+        precision_floor – maximize recall subject to precision ≥ min_precision
+        f_beta       – maximize F_β score (β < 1 penalises FP heavily)
+
+    Returns (threshold, tpr_at_thresh, fpr_at_thresh, strategy_name).
+    """
+    if strategy == "youden":
+        j_scores = tpr - fpr
+        idx = np.argmax(j_scores)
+
+    elif strategy == "fpr_ceiling":
+        mask = fpr <= max_fpr
+        if not np.any(mask):
+            # fall back to lowest FPR available
+            idx = np.argmin(fpr[fpr > 0]) if np.any(fpr > 0) else 0
+        else:
+            # among points with FPR ≤ ceiling, pick highest TPR
+            candidates = np.where(mask)[0]
+            idx = candidates[np.argmax(tpr[candidates])]
+
+    elif strategy == "precision_floor":
+        # precision = TP / (TP + FP) ≈ (TPR * n_pos) / (TPR * n_pos + FPR * n_neg)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            tp_est = tpr * n_pos
+            fp_est = fpr * n_neg
+            precision = np.where(
+                (tp_est + fp_est) > 0,
+                tp_est / (tp_est + fp_est),
+                0.0,
+            )
+        mask = precision >= min_precision
+        if not np.any(mask):
+            idx = np.argmax(precision)
+        else:
+            candidates = np.where(mask)[0]
+            idx = candidates[np.argmax(tpr[candidates])]
+
+    elif strategy == "f_beta":
+        beta2 = f_beta ** 2
+        with np.errstate(divide='ignore', invalid='ignore'):
+            tp_est = tpr * n_pos
+            fp_est = fpr * n_neg
+            precision = np.where(
+                (tp_est + fp_est) > 0,
+                tp_est / (tp_est + fp_est),
+                0.0,
+            )
+            recall = tpr
+            fb = np.where(
+                (precision + recall) > 0,
+                (1 + beta2) * precision * recall / (beta2 * precision + recall),
+                0.0,
+            )
+        idx = np.argmax(fb)
+
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+    return (
+        float(actual_thresholds[idx]),
+        float(tpr[idx]),
+        float(fpr[idx]),
+        strategy,
+    )
+
+
 def calibrate_scenario(
-    scenario: str, cost_fn, time_win: float, param: dict
+    scenario: str, cost_fn, time_win: float, param: dict,
+    strategy: str = "fpr_ceiling", max_fpr: float = 0.005,
+    min_precision: float = 0.99, f_beta: float = 0.1,
 ) -> dict:
     """Run calibration for a single scenario. Returns results dict or None."""
     print(f"\n--- Scenario {scenario} ---")
@@ -181,12 +264,19 @@ def calibrate_scenario(
     # Thresholds from roc_curve on negated scores: actual_thresh = -thresholds
     actual_thresholds = -thresholds
 
-    # Youden's J statistic: maximize (TPR - FPR)
-    j_scores = tpr - fpr
-    best_idx = np.argmax(j_scores)
-    optimal_thresh = actual_thresholds[best_idx]
-    best_tpr = tpr[best_idx]
-    best_fpr = fpr[best_idx]
+    # Select threshold using chosen strategy
+    optimal_thresh, best_tpr, best_fpr, strat_used = select_threshold(
+        fpr, tpr, actual_thresholds, n_pos, n_neg,
+        strategy=strategy, max_fpr=max_fpr,
+        min_precision=min_precision, f_beta=f_beta,
+    )
+
+    # Also compute Youden for comparison when using a different strategy
+    youden_thresh = None
+    if strategy != "youden":
+        j_scores = tpr - fpr
+        youden_idx = np.argmax(j_scores)
+        youden_thresh = float(actual_thresholds[youden_idx])
 
     # Cost distribution stats
     pos_costs = costs[labels == 1]
@@ -199,12 +289,19 @@ def calibrate_scenario(
         if np.any(pos_costs < optimal_thresh) else 0.0
     margin = min(margin, margin_below)
 
+    # Expected false edges at this threshold
+    expected_false_edges = int(round(best_fpr * n_neg))
+    neg_pos_ratio = n_neg / n_pos if n_pos > 0 else float('inf')
+
     result = {
         "scenario": scenario,
+        "strategy": strat_used,
         "optimal_thresh": float(optimal_thresh),
         "margin": float(margin),
         "tpr": float(best_tpr),
         "fpr": float(best_fpr),
+        "expected_false_edges": expected_false_edges,
+        "neg_pos_ratio": float(neg_pos_ratio),
         "n_pairs": len(labels),
         "n_pos": n_pos,
         "n_neg": n_neg,
@@ -215,14 +312,22 @@ def calibrate_scenario(
         "neg_cost_std": float(neg_costs.std()),
         "neg_cost_min": float(neg_costs.min()),
     }
+    if youden_thresh is not None:
+        result["youden_thresh"] = youden_thresh
 
+    print(f"  Strategy: {strat_used}")
     print(f"  Optimal threshold: {optimal_thresh:.3f} "
           f"(TPR={best_tpr:.3f}, FPR={best_fpr:.3f})")
+    print(f"  Expected false edges: {expected_false_edges} "
+          f"(FPR={best_fpr:.4f} × {n_neg} neg)")
+    print(f"  Neg:Pos ratio: {neg_pos_ratio:.1f}:1")
     print(f"  Margin: {margin:.3f}")
     print(f"  Positive costs: mean={pos_costs.mean():.3f}, "
           f"std={pos_costs.std():.3f}, max={pos_costs.max():.3f}")
     print(f"  Negative costs: mean={neg_costs.mean():.3f}, "
           f"std={neg_costs.std():.3f}, min={neg_costs.min():.3f}")
+    if youden_thresh is not None:
+        print(f"  (Youden J threshold would be: {youden_thresh:.3f})")
 
     return result
 
@@ -247,6 +352,23 @@ def main():
         "--max-x-gap", type=float, default=800.0,
         help="Maximum x-position gap for candidate pairs (default: 800 ft)"
     )
+    parser.add_argument(
+        "--strategy", default="fpr_ceiling",
+        choices=["youden", "fpr_ceiling", "precision_floor", "f_beta"],
+        help="Threshold selection strategy (default: fpr_ceiling)"
+    )
+    parser.add_argument(
+        "--max-fpr", type=float, default=0.005,
+        help="Max FPR for fpr_ceiling strategy (default: 0.005 = 0.5%%)"
+    )
+    parser.add_argument(
+        "--min-precision", type=float, default=0.99,
+        help="Min precision for precision_floor strategy (default: 0.99)"
+    )
+    parser.add_argument(
+        "--f-beta", type=float, default=0.1,
+        help="Beta for f_beta strategy; <1 penalises FP (default: 0.1)"
+    )
     args = parser.parse_args()
 
     # Load config
@@ -261,6 +383,7 @@ def main():
     print(f"=== Stitch Threshold Calibration ===")
     print(f"Config: {args.config}")
     print(f"Cost function: {cost_type}")
+    print(f"Strategy: {args.strategy}")
     print(f"Time window: {time_win}s")
     print(f"Scenarios: {args.scenarios}")
 
@@ -271,7 +394,11 @@ def main():
     # Run calibration per scenario
     results = []
     for scenario in args.scenarios:
-        result = calibrate_scenario(scenario, cost_fn, time_win, param)
+        result = calibrate_scenario(
+            scenario, cost_fn, time_win, param,
+            strategy=args.strategy, max_fpr=args.max_fpr,
+            min_precision=args.min_precision, f_beta=args.f_beta,
+        )
         if result is not None:
             results.append(result)
 
@@ -300,7 +427,8 @@ def main():
             f"optimal_thresh={r['optimal_thresh']:.3f}, "
             f"margin={r['margin']:.3f}, "
             f"pairs={r['n_pairs']} "
-            f"(pos={r['n_pos']}, neg={r['n_neg']})"
+            f"(pos={r['n_pos']}, neg={r['n_neg']}), "
+            f"expected_FP_edges={r['expected_false_edges']}"
         )
 
     print()

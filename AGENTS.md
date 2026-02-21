@@ -54,9 +54,18 @@ python mot_i24.py i
 
 ### Threshold Calibration
 ```bash
-# Auto-find optimal stitch_thresh for any cost function via ROC on GT-labeled pairs
+# Auto-find optimal stitch_thresh (default: fpr_ceiling at 0.5% FPR)
 python calibrate_threshold.py --config parameters_PINN.json
-python calibrate_threshold.py --config parameters_PINN.json --scenarios i ii
+python calibrate_threshold.py --config parameters_PINN.json --strategy fpr_ceiling --max-fpr 0.01
+python calibrate_threshold.py --config parameters_PINN.json --strategy youden  # legacy, often too permissive
+```
+
+### Threshold Sweep (end-to-end HOTA optimisation)
+```bash
+# Two-phase: pair-level pre-filter → pipeline runs
+python sweep_threshold.py --config parameters_PINN.json --scenarios i
+python sweep_threshold.py --config parameters_PINN.json --phase1-only  # fast, no pipeline runs
+python sweep_threshold.py --config parameters_PINN.json --thresholds 1.5 2.0 2.5 3.0
 ```
 
 ### PINNv2 Reproducibility
@@ -99,6 +108,13 @@ python hota_trackeval.py --gt-file GT_i.json --tracker-file REC_i_v2_recreated.j
   - Positive costs: mean=1.59, std=0.81, max=4.96
   - Negative costs: mean=7.77, std=4.40, min=1.39
   - Current `stitch_thresh=3` is close to optimal for PINN.
+
+## Calibration Strategy Update (2026-02-21)
+
+- **Problem**: Youden's J (TPR−FPR) optimises pair classification, not MCF graph stitching. With neg:pos ratio ~26:1, even FPR=3.4% yields ~436 false edges → excessive bad links.
+- `calibrate_threshold.py` now defaults to `fpr_ceiling` (0.5% FPR). Available strategies: `fpr_ceiling`, `precision_floor`, `f_beta`, `youden`.
+- `sweep_threshold.py` added: two-phase threshold sweep (pair-level pre-filter → end-to-end HOTA optimisation).
+- PINN scenario i comparison: fpr_ceiling thresh=2.325 (71 false edges) vs youden thresh=2.806 (436 false edges).
 
 ## PINNv2 Findings (2026-02-21)
 
