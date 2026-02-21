@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -55,11 +55,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-clip", type=float, default=1.0)
 
     parser.add_argument("--margin", type=float, default=0.2)
-    parser.add_argument("--gt-weight", type=float, default=0.8)
+    parser.add_argument("--gt-weight", type=float, default=0.5)
     parser.add_argument("--soft-weight", type=float, default=0.2)
+    parser.add_argument("--sep-weight", type=float, default=0.15)
+    parser.add_argument("--pos-margin", type=float, default=1.0)
+    parser.add_argument("--neg-margin", type=float, default=5.0)
+    parser.add_argument("--top1-weight", type=float, default=0.15)
+    parser.add_argument("--soft-anneal-epochs", type=int, default=10)
 
     parser.add_argument("--enable-mining-epoch", type=int, default=3)
     parser.add_argument("--max-neg-per-pos", type=int, default=3)
+
+    parser.add_argument("--pos-pair-weight", type=float, default=1.0,
+                        help="Multiplicative weight on positive-side GT margin losses (default 1.0, recommend 5.0).")
+    parser.add_argument("--oversample-pos-groups", action="store_true", default=False,
+                        help="Oversample anchor groups containing GT positives (2x weight).")
 
     parser.add_argument("--norm-sample-pairs", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=42)
@@ -108,6 +118,9 @@ class BatchStats:
     loss: float
     gt_term: float
     soft_term: float
+    sep_term: float
+    top1_term: float
+    effective_soft_weight: float
     semi_hard_selected: int
     hard_selected: int
     random_selected: int
@@ -374,14 +387,21 @@ def compute_weighted_pairwise_margin_loss(
     group_slices: Sequence[Tuple[int, int]],
     margin: float,
     gt_weight: float,
-    soft_weight: float,
+    effective_soft_weight: float,
+    sep_weight: float,
+    pos_margin: float,
+    neg_margin: float,
+    top1_weight: float,
     enable_mining: bool,
     max_neg_per_pos: int,
+    pos_pair_weight: float = 1.0,
 ) -> Tuple[torch.Tensor, BatchStats]:
     device = scores.device
     group_losses: List[torch.Tensor] = []
     gt_terms: List[torch.Tensor] = []
     soft_terms: List[torch.Tensor] = []
+    sep_terms: List[torch.Tensor] = []
+    top1_terms: List[torch.Tensor] = []
 
     semi_hard_selected = 0
     hard_selected = 0
@@ -411,9 +431,9 @@ def compute_weighted_pairwise_margin_loss(
                     semi_hard_selected += c_semi
                     hard_selected += c_hard
                     random_selected += c_rand
-                    losses = F.relu(float(margin) + p - mined)
+                    losses = F.relu(float(margin) + p - mined) * float(pos_pair_weight)
                 else:
-                    losses = F.relu(float(margin) + p - neg_scores)
+                    losses = F.relu(float(margin) + p - neg_scores) * float(pos_pair_weight)
                 gt_pair_losses.append(losses.reshape(-1))
 
         if gt_pair_losses:
@@ -452,10 +472,49 @@ def compute_weighted_pairwise_margin_loss(
         else:
             soft_term = torch.zeros((), device=device)
 
-        group_total = float(gt_weight) * gt_term + float(soft_weight) * soft_term
+        sep_losses: List[torch.Tensor] = []
+        for idx in range(s.numel()):
+            label = int(y[idx].item())
+            if label < 0:
+                continue
+            cost = F.softplus(s[idx])
+            if label == 1:
+                sep_losses.append(F.relu(cost - float(pos_margin)) ** 2)
+            else:
+                sep_losses.append(F.relu(float(neg_margin) - cost) ** 2)
+
+        if sep_losses:
+            sep_term = torch.stack(sep_losses).mean()
+        else:
+            sep_term = torch.zeros((), device=device)
+
+        known_mask = y >= 0
+        known_s = s[known_mask]
+        known_y = y[known_mask]
+        known_pos_mask = known_y == 1
+        known_neg_mask = known_y == 0
+        if (
+            known_s.numel() >= 2
+            and bool(known_pos_mask.any().item())
+            and bool(known_neg_mask.any().item())
+        ):
+            logits = -known_s
+            pos_logits = logits[known_pos_mask]
+            top1_term = -torch.logsumexp(pos_logits, dim=0) + torch.logsumexp(logits, dim=0)
+        else:
+            top1_term = torch.zeros((), device=device)
+
+        group_total = (
+            float(gt_weight) * gt_term
+            + float(effective_soft_weight) * soft_term
+            + float(sep_weight) * sep_term
+            + float(top1_weight) * top1_term
+        )
         group_losses.append(group_total)
         gt_terms.append(gt_term)
         soft_terms.append(soft_term)
+        sep_terms.append(sep_term)
+        top1_terms.append(top1_term)
 
     if group_losses:
         total_loss = torch.stack(group_losses).mean()
@@ -466,6 +525,9 @@ def compute_weighted_pairwise_margin_loss(
         loss=float(total_loss.detach().item()),
         gt_term=float(torch.stack(gt_terms).mean().detach().item()) if gt_terms else 0.0,
         soft_term=float(torch.stack(soft_terms).mean().detach().item()) if soft_terms else 0.0,
+        sep_term=float(torch.stack(sep_terms).mean().detach().item()) if sep_terms else 0.0,
+        top1_term=float(torch.stack(top1_terms).mean().detach().item()) if top1_terms else 0.0,
+        effective_soft_weight=float(effective_soft_weight),
         semi_hard_selected=int(semi_hard_selected),
         hard_selected=int(hard_selected),
         random_selected=int(random_selected),
@@ -566,10 +628,21 @@ def main() -> None:
     train_ds.set_norm_stats(norm_stats)
     val_ds.set_norm_stats(norm_stats)
 
+    train_sampler = None
+    train_shuffle = True
+    if args.oversample_pos_groups:
+        weights = []
+        for group in train_ds.groups:
+            has_pos = any(r.get("gt_label") == 1 for r in group)
+            weights.append(2.0 if has_pos else 1.0)
+        train_sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+        train_shuffle = False
+
     train_loader = DataLoader(
         train_ds,
         batch_size=args.anchors_per_batch,
-        shuffle=True,
+        shuffle=train_shuffle,
+        sampler=train_sampler,
         collate_fn=ranking_collate_fn,
     )
     val_loader = DataLoader(
@@ -613,11 +686,17 @@ def main() -> None:
         running_loss = 0.0
         running_gt = 0.0
         running_soft = 0.0
+        running_sep = 0.0
+        running_top1 = 0.0
         running_groups = 0
 
         mining_semi = 0
         mining_hard = 0
         mining_random = 0
+
+        anneal_epochs = max(int(args.soft_anneal_epochs), 1)
+        anneal_factor = max(0.0, 1.0 - (float(epoch) / float(anneal_epochs)))
+        effective_soft_weight = float(args.soft_weight) * anneal_factor
 
         for pa, ma, pb, mb, ep, gt, bhat, group_slices, _anchor_ids in train_loader:
             pa = pa.to(device)
@@ -639,9 +718,14 @@ def main() -> None:
                 group_slices=group_slices,
                 margin=float(args.margin),
                 gt_weight=float(args.gt_weight),
-                soft_weight=float(args.soft_weight),
+                effective_soft_weight=float(effective_soft_weight),
+                sep_weight=float(args.sep_weight),
+                pos_margin=float(args.pos_margin),
+                neg_margin=float(args.neg_margin),
+                top1_weight=float(args.top1_weight),
                 enable_mining=enable_mining,
                 max_neg_per_pos=int(args.max_neg_per_pos),
+                pos_pair_weight=float(args.pos_pair_weight),
             )
 
             loss.backward()
@@ -651,6 +735,8 @@ def main() -> None:
             running_loss += stats.loss * max(stats.num_groups, 1)
             running_gt += stats.gt_term * max(stats.num_groups, 1)
             running_soft += stats.soft_term * max(stats.num_groups, 1)
+            running_sep += stats.sep_term * max(stats.num_groups, 1)
+            running_top1 += stats.top1_term * max(stats.num_groups, 1)
             running_groups += stats.num_groups
             mining_semi += stats.semi_hard_selected
             mining_hard += stats.hard_selected
@@ -665,6 +751,8 @@ def main() -> None:
         train_loss = running_loss / denom
         train_gt = running_gt / denom
         train_soft = running_soft / denom
+        train_sep = running_sep / denom
+        train_top1 = running_top1 / denom
         total_mined = mining_semi + mining_hard + mining_random
         random_fallback_rate = float(mining_random / total_mined) if total_mined > 0 else 0.0
 
@@ -673,6 +761,9 @@ def main() -> None:
             "train_loss": float(train_loss),
             "train_gt_term": float(train_gt),
             "train_soft_term": float(train_soft),
+            "train_sep_term": float(train_sep),
+            "train_top1_term": float(train_top1),
+            "effective_soft_weight": float(effective_soft_weight),
             "val_pairwise_acc_gt_crossclass": float(val_metrics["pairwise_acc_gt_crossclass"]),
             "val_anchor_top1_acc": float(val_metrics["anchor_top1_acc"]),
             "val_mean_anchor_spearman": float(val_metrics["mean_anchor_spearman"]),
@@ -686,7 +777,8 @@ def main() -> None:
 
         print(
             f"Epoch {epoch:02d} | "
-            f"loss={train_loss:.4f} gt={train_gt:.4f} soft={train_soft:.4f} | "
+            f"loss={train_loss:.4f} gt={train_gt:.4f} soft={train_soft:.4f} "
+            f"sep={train_sep:.4f} top1={train_top1:.4f} sw={effective_soft_weight:.4f} | "
             f"val_top1={val_metrics['anchor_top1_acc']:.4f} "
             f"val_pair={val_metrics['pairwise_acc_gt_crossclass']:.4f} "
             f"val_spear={val_metrics['mean_anchor_spearman']:.4f} | "
@@ -729,8 +821,15 @@ def main() -> None:
             "margin": float(args.margin),
             "gt_weight": float(args.gt_weight),
             "soft_weight": float(args.soft_weight),
+            "sep_weight": float(args.sep_weight),
+            "pos_margin": float(args.pos_margin),
+            "neg_margin": float(args.neg_margin),
+            "top1_weight": float(args.top1_weight),
+            "soft_anneal_epochs": int(args.soft_anneal_epochs),
             "enable_mining_epoch": int(args.enable_mining_epoch),
             "max_neg_per_pos": int(args.max_neg_per_pos),
+            "pos_pair_weight": float(args.pos_pair_weight),
+            "oversample_pos_groups": bool(args.oversample_pos_groups),
             "seed": int(args.seed),
         },
     }

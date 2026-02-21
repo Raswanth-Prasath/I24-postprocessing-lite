@@ -73,6 +73,18 @@ def parse_args() -> argparse.Namespace:
         default=80,
         help="Abort if anchors with both positive and negative GT labels are below this threshold.",
     )
+    parser.add_argument(
+        "--subsample-large-groups",
+        action="store_true",
+        default=True,
+        help="Subsample oversized groups instead of discarding them (default: True).",
+    )
+    parser.add_argument(
+        "--no-subsample-large-groups",
+        dest="subsample_large_groups",
+        action="store_false",
+        help="Discard oversized groups (legacy behavior).",
+    )
     return parser.parse_args()
 
 
@@ -139,33 +151,30 @@ def _summarize_from_anchor_meta(anchor_meta: Dict[str, Dict[str, Any]]) -> Dict[
     }
 
 
-def _assign_split_by_anchor_gt(
+def _assign_split_by_vehicle_gt(
     filtered_anchor_meta: Dict[str, Dict[str, Any]],
+    all_vehicle_gt_ids: set,
     seed: int,
     val_ratio: float,
     test_ratio: float,
-) -> Dict[str, str]:
-    anchor_gt_ids = sorted(
-        {
-            str(v["anchor_gt_id"])
-            for v in filtered_anchor_meta.values()
-            if v.get("anchor_gt_id") is not None
-        }
-    )
+) -> tuple:
+    """Split by ALL unique vehicle GT IDs (anchor + candidate roles) to prevent cross-role leakage."""
+    vehicle_ids = sorted(all_vehicle_gt_ids)
 
     rng = np.random.default_rng(int(seed))
-    if anchor_gt_ids:
-        perm = rng.permutation(len(anchor_gt_ids))
-        anchor_gt_ids = [anchor_gt_ids[i] for i in perm]
+    if vehicle_ids:
+        perm = rng.permutation(len(vehicle_ids))
+        vehicle_ids = [vehicle_ids[i] for i in perm]
 
-    n_total = len(anchor_gt_ids)
+    n_total = len(vehicle_ids)
     n_test = int(max(0, math.floor(n_total * float(test_ratio))))
     n_val = int(max(0, math.floor(n_total * float(val_ratio))))
     n_test = min(n_test, n_total)
     n_val = min(n_val, max(0, n_total - n_test))
 
-    test_ids = set(anchor_gt_ids[:n_test])
-    val_ids = set(anchor_gt_ids[n_test:n_test + n_val])
+    test_ids = set(vehicle_ids[:n_test])
+    val_ids = set(vehicle_ids[n_test:n_test + n_val])
+    train_ids = set(vehicle_ids[n_test + n_val:])
 
     split_by_anchor_key: Dict[str, str] = {}
     for anchor_key, meta in filtered_anchor_meta.items():
@@ -180,7 +189,30 @@ def _assign_split_by_anchor_gt(
             split = "train"
         split_by_anchor_key[anchor_key] = split
 
-    return split_by_anchor_key
+    return split_by_anchor_key, train_ids, val_ids, test_ids
+
+
+def _subsample_group_rows(
+    rows: List[Dict[str, Any]],
+    max_size: int,
+    rng: np.random.Generator,
+) -> List[Dict[str, Any]]:
+    """Subsample an oversized anchor group, prioritising positive-labeled rows."""
+    if len(rows) <= max_size:
+        return rows
+    pos = [r for r in rows if r.get("gt_label") == 1]
+    rest = [r for r in rows if r.get("gt_label") != 1]
+    keep: List[Dict[str, Any]] = list(pos)
+    if len(keep) >= max_size:
+        idx = rng.choice(len(keep), size=max_size, replace=False)
+        return [keep[int(i)] for i in idx]
+    needed = max_size - len(keep)
+    if len(rest) <= needed:
+        keep.extend(rest)
+    else:
+        idx = rng.choice(len(rest), size=needed, replace=False)
+        keep.extend(rest[int(i)] for i in idx)
+    return keep
 
 
 def _fragments_path_for_output(output_path: Path) -> Path:
@@ -200,6 +232,7 @@ def main() -> None:
 
     per_scenario_meta: Dict[str, Dict[str, Dict[str, Any]]] = {}
     global_anchor_meta: Dict[str, Dict[str, Any]] = {}
+    all_vehicle_gt_ids: set = set()  # union of anchor + candidate GT IDs for C3 fix
 
     tmp_fd, tmp_path = tempfile.mkstemp(prefix="ranking_dataset_tmp_", suffix=".jsonl", dir=str(output_path.parent))
     tmp_file_path = Path(tmp_path)
@@ -246,6 +279,11 @@ def main() -> None:
                     anchor_gt_id = _get_gt_id(track2)
                     candidate_gt_id = _get_gt_id(track1)
 
+                    if anchor_gt_id is not None:
+                        all_vehicle_gt_ids.add(str(anchor_gt_id))
+                    if candidate_gt_id is not None:
+                        all_vehicle_gt_ids.add(str(candidate_gt_id))
+
                     row = {
                         "scenario": scenario,
                         "anchor_key": str(anchor_key),
@@ -278,7 +316,9 @@ def main() -> None:
         filtered_anchor_meta: Dict[str, Dict[str, Any]] = {}
         for anchor_key, meta in global_anchor_meta.items():
             cnt = int(meta["count"])
-            if cnt < int(args.min_group_size) or cnt > int(args.max_group_size):
+            if cnt < int(args.min_group_size):
+                continue
+            if not args.subsample_large_groups and cnt > int(args.max_group_size):
                 continue
             filtered_anchor_meta[anchor_key] = meta
 
@@ -296,8 +336,9 @@ def main() -> None:
                 f"{post_filter_summary['anchors_with_pos_and_neg_gt']} < {args.min_mixed_gt_anchors}"
             )
 
-        split_by_anchor_key = _assign_split_by_anchor_gt(
+        split_by_anchor_key, train_vehicle_ids, val_vehicle_ids, test_vehicle_ids = _assign_split_by_vehicle_gt(
             filtered_anchor_meta,
+            all_vehicle_gt_ids=all_vehicle_gt_ids,
             seed=int(args.seed),
             val_ratio=float(args.val_ratio),
             test_ratio=float(args.test_ratio),
@@ -307,11 +348,22 @@ def main() -> None:
         split_counts = {"train": 0, "val": 0, "test": 0}
         anchor_split_counts = {"train": 0, "val": 0, "test": 0}
         filtered_anchor_keys = set(filtered_anchor_meta.keys())
+        cross_partition_masked = 0
+        subsample_rng = np.random.default_rng(int(args.seed) + 1)
+
+        # Build vehicle ID sets per split for label masking
+        split_vehicle_sets = {
+            "train": train_vehicle_ids,
+            "val": val_vehicle_ids,
+            "test": test_vehicle_ids,
+        }
 
         for anchor_key, split in split_by_anchor_key.items():
             anchor_split_counts[split] = anchor_split_counts.get(split, 0) + 1
 
-        with open(tmp_file_path, "r") as in_f, open(output_path, "w") as out_f:
+        # Collect rows per anchor group for potential subsampling
+        anchor_group_rows: Dict[str, List[Dict[str, Any]]] = {}
+        with open(tmp_file_path, "r") as in_f:
             for line in in_f:
                 line = line.strip()
                 if not line:
@@ -320,15 +372,33 @@ def main() -> None:
                 anchor_key = str(row["anchor_key"])
                 if anchor_key not in filtered_anchor_keys:
                     continue
+                anchor_group_rows.setdefault(anchor_key, []).append(row)
 
-                out_row = dict(row)
-                out_row["group_size"] = int(filtered_anchor_meta[anchor_key]["count"])
+        with open(output_path, "w") as out_f:
+            for anchor_key, rows in sorted(anchor_group_rows.items()):
                 split = split_by_anchor_key.get(anchor_key, "train")
-                out_row["split"] = split
-                out_f.write(json.dumps(out_row) + "\n")
+                own_vehicles = split_vehicle_sets.get(split, set())
 
-                rows_written += 1
-                split_counts[split] = split_counts.get(split, 0) + 1
+                # C4: subsample oversized groups instead of discarding
+                if args.subsample_large_groups and len(rows) > int(args.max_group_size):
+                    rows = _subsample_group_rows(rows, int(args.max_group_size), subsample_rng)
+
+                for row in rows:
+                    out_row = dict(row)
+                    out_row["group_size"] = min(len(rows), int(args.max_group_size))
+                    out_row["split"] = split
+
+                    # C3: mask GT label if candidate's vehicle is in a different partition
+                    cgt = row.get("candidate_gt_id")
+                    if cgt is not None and out_row.get("gt_label") is not None:
+                        if str(cgt) not in own_vehicles and str(cgt) in all_vehicle_gt_ids:
+                            out_row["gt_label"] = None
+                            out_row["has_gt_pair_label"] = False
+                            cross_partition_masked += 1
+
+                    out_f.write(json.dumps(out_row) + "\n")
+                    rows_written += 1
+                    split_counts[split] = split_counts.get(split, 0) + 1
 
         manifest = {
             "generated_at": str(np.datetime64("now")),
@@ -336,12 +406,14 @@ def main() -> None:
             "config": {
                 "min_group_size": int(args.min_group_size),
                 "max_group_size": int(args.max_group_size),
+                "subsample_large_groups": bool(args.subsample_large_groups),
                 "seed": int(args.seed),
                 "val_ratio": float(args.val_ratio),
                 "test_ratio": float(args.test_ratio),
                 "min_valid_anchors": int(args.min_valid_anchors),
                 "min_mixed_gt_anchors": int(args.min_mixed_gt_anchors),
                 "storage_mode": "deduplicated_fragments",
+                "split_strategy": "vehicle_level",
             },
             "raw_summary_by_scenario": raw_summary_by_scenario,
             "pre_filter_summary": pre_filter_summary,
@@ -350,6 +422,11 @@ def main() -> None:
             "row_split_counts": split_counts,
             "rows_written": int(rows_written),
             "unique_fragments": int(unique_fragment_count),
+            "vehicle_gt_ids_total": int(len(all_vehicle_gt_ids)),
+            "vehicle_gt_ids_train": int(len(train_vehicle_ids)),
+            "vehicle_gt_ids_val": int(len(val_vehicle_ids)),
+            "vehicle_gt_ids_test": int(len(test_vehicle_ids)),
+            "cross_partition_labels_masked": int(cross_partition_masked),
             "output_path": str(output_path),
             "fragments_path": str(fragments_path),
         }
@@ -364,6 +441,8 @@ def main() -> None:
         print(f"Anchors with mixed GT: {post_filter_summary['anchors_with_pos_and_neg_gt']}")
         print(f"Rows written: {rows_written}")
         print(f"Unique fragments: {unique_fragment_count}")
+        print(f"Vehicle GT IDs: {len(all_vehicle_gt_ids)} total, {len(train_vehicle_ids)} train, {len(val_vehicle_ids)} val")
+        print(f"Cross-partition GT labels masked: {cross_partition_masked}")
 
     finally:
         try:
