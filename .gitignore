@@ -70,3 +70,4 @@ htmlcov/
 
 # Pre-commit
 .pre-commit-config.yaml.backup
+.claude/worktrees/

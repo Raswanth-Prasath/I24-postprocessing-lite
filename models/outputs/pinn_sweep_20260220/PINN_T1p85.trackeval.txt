@@ -1,0 +1,5 @@
+============================================================
+TrackEval Metrics for explicit files: PINN_T1p85
+============================================================
+Error loading files: Expecting ':' delimiter: line 1 column 489482 (char 489481)
+Tip: run 'python diagnose_json.py <file> --fix' to repair malformed JSON

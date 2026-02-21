@@ -1,0 +1,54 @@
+Checkpoint: models/outputs/pinn_model_issue45_composite.pth
+Dataset: models/outputs/transformer_ranking_dataset.jsonl
+Device: cuda
+
+Loaded 13711 val pairs
+Resolved model type: pinn
+
+Array sizes: raw_scores=13711, gt_labels=13711, sp_costs=13711, bhat_costs=13711
+Processed 13711 pairs (377 positive, 13048 negative, 286 unknown)
+
+============================================================
+PINN COSTS (direct output used by MCF)
+============================================================
+
+  POSITIVE (n=377):
+    min=1.7040  p5=2.6459  p25=4.1228  median=5.6611  p75=7.2524  p95=9.8612  max=13.9279
+
+  NEGATIVE (n=13048):
+    min=5.7743  p5=11.5691  p25=16.8554  median=22.6986  p75=29.9693  p95=42.6714  max=75.8780
+
+============================================================
+BHATTACHARYYA COSTS (for comparison)
+============================================================
+
+  POSITIVE (n=377):
+    min=0.0953  p5=0.1449  p25=0.2257  median=0.4825  p75=1.1380  p95=2.8560  max=7.1868
+
+  NEGATIVE (n=13048):
+    min=0.6344  p5=5.4701  p25=25.2941  median=62.6075  p75=198.8001  p95=2550.9664  max=96669.5441
+
+============================================================
+SEPARATION ANALYSIS
+============================================================
+
+  Softplus cost ranges:
+    Positive: [1.7040, 13.9279]
+    Negative: [5.7743, 75.8780]
+    Overlap zone: [5.7743, 13.9279]
+
+  Suggested stitch_thresh (from positive percentiles):
+    p90(positive)=8.7574  →  TP=89.9%, FP=0.7%
+    p95(positive)=9.8612  →  TP=95.0%, FP=1.7%
+    p99(positive)=12.6389  →  TP=98.9%, FP=7.9%
+
+  Threshold sweep:
+      thresh     TP%     FP%  precision  avg_pos_margin
+         2.0   1.1%   0.0%      1.000           0.212
+         2.5   3.4%   0.0%      1.000           0.400
+         3.0   8.8%   0.0%      1.000           0.491
+         3.5  14.1%   0.0%      1.000           0.709
+         4.0  22.8%   0.0%      1.000           0.858
+         4.5  31.8%   0.0%      1.000           1.040
+         5.0  37.9%   0.0%      1.000           1.323
+         6.0  56.5%   0.0%      0.986           1.722

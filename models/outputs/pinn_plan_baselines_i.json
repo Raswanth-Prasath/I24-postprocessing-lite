@@ -1,0 +1,58 @@
+[
+  {
+    "variant": "Bhat",
+    "file": "REC_i_Bhat.json",
+    "status": "ok",
+    "HOTA": 0.416,
+    "MOTA": 0.688,
+    "Precision": 0.895,
+    "Recall": 0.78,
+    "FP": 11063,
+    "IDsw": 152,
+    "Sw/GT": 0.49,
+    "Fgmt/GT": 1.46,
+    "No. trajs": 457
+  },
+  {
+    "variant": "GateRank",
+    "file": "REC_i_GateRank.json",
+    "status": "ok",
+    "HOTA": 0.394,
+    "MOTA": 0.571,
+    "Precision": 0.787,
+    "Recall": 0.784,
+    "FP": 25642,
+    "IDsw": 179,
+    "Sw/GT": 0.57,
+    "Fgmt/GT": 1.72,
+    "No. trajs": 538
+  },
+  {
+    "variant": "TransformerV2",
+    "file": "REC_i_TransformerV2.json",
+    "status": "ok",
+    "HOTA": 0.083,
+    "MOTA": -0.343,
+    "Precision": 0.105,
+    "Recall": 0.045,
+    "FP": 46562,
+    "IDsw": 341,
+    "Sw/GT": 1.09,
+    "Fgmt/GT": 0.17,
+    "No. trajs": 52
+  },
+  {
+    "variant": "PhysicsOnly",
+    "file": "REC_i_PhysicsOnly.json",
+    "status": "ok",
+    "HOTA": 0.323,
+    "MOTA": 0.646,
+    "Precision": 0.906,
+    "Recall": 0.723,
+    "FP": 9041,
+    "IDsw": 383,
+    "Sw/GT": 1.22,
+    "Fgmt/GT": 2.24,
+    "No. trajs": 702
+  }
+]

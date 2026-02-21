@@ -1,0 +1,54 @@
+=== Stitch Threshold Calibration ===
+Config: parameters_PINNv3.json
+Cost function: pinn
+Time window: 15s
+Scenarios: ['i', 'ii', 'iii']
+
+Initializing cost function...
+[PINNCostFunction] Loaded model from /home/raswanth/I24/I24-postprocessing-lite/models/outputs/pinn_model_v3.pth
+
+--- Scenario i ---
+  Loading from RAW_i.json...
+  Loaded 789 fragments (0 discarded short)
+  Generating pairs...
+  Pairs: 18659 (pos=677, neg=17982), skipped=0, time=100.1s
+  Optimal threshold: 10.638 (TPR=0.981, FPR=0.021)
+  Margin: 0.002
+  Positive costs: mean=5.759, std=2.186, max=13.290
+  Negative costs: mean=25.135, std=10.745, min=6.688
+
+--- Scenario ii ---
+  Loading from RAW_ii.json...
+  Loaded 408 fragments (3 discarded short)
+  Generating pairs...
+  Pairs: 10366 (pos=593, neg=9773), skipped=0, time=48.4s
+  Optimal threshold: 10.274 (TPR=0.971, FPR=0.042)
+  Margin: 0.003
+  Positive costs: mean=6.047, std=2.202, max=14.601
+  Negative costs: mean=26.132, std=13.125, min=5.709
+
+--- Scenario iii ---
+  Loading from RAW_iii.json...
+  Loaded 1110 fragments (2 discarded short)
+  Generating pairs...
+  Pairs: 85726 (pos=1537, neg=84189), skipped=0, time=373.5s
+  Optimal threshold: 10.122 (TPR=0.971, FPR=0.069)
+  Margin: 0.000
+  Positive costs: mean=6.029, std=2.224, max=18.334
+  Negative costs: mean=22.205, std=11.136, min=2.300
+
+==================================================
+=== Calibration Results ===
+Config: parameters_PINNv3.json
+Cost function: pinn
+
+Scenario   i:  optimal_thresh=10.638, margin=0.002, pairs=18659 (pos=677, neg=17982)
+Scenario  ii:  optimal_thresh=10.274, margin=0.003, pairs=10366 (pos=593, neg=9773)
+Scenario iii:  optimal_thresh=10.122, margin=0.000, pairs=85726 (pos=1537, neg=84189)
+
+Average optimal threshold: 10.220 (weighted by pair count)
+Average margin: 0.001
+
+Cost distribution (positive pairs): mean=5.945
+Cost distribution (negative pairs): mean=24.490
+[PINNCostFunction] Stats: {"cache_size": 2268, "calibration_applied_count": 0, "count": 114751, "hist_bins": [0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, Infinity], "hist_counts": [0, 0, 38, 179, 850, 7537, 106147], "invalid_cost_count": 0, "max": 78.30290985107422, "mean": 22.601211747946895, "min": 1.405777931213379, "std": 11.52436942244124}

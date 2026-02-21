@@ -1,0 +1,30 @@
+============================================================
+TrackEval Metrics for explicit files: HeteroT6_partial
+============================================================
+Loaded 313 GT trajectories, 136 tracker trajectories
+
+==================================================
+  Results for HeteroT6_partial
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.141
+  DetA                 0.067
+  AssA                 0.297
+  LocA                 0.670
+  MOTA                 0.044
+  MOTP                 0.530
+  IDF1                 0.105
+  IDR                  0.065
+  IDP                  0.286
+  Precision            0.598
+  Recall               0.135
+  IDsw                    78
+  FP                   11015
+  FN                  104626
+  Frag                    92
+  No. trajs              136
+  Fgmt/GT               0.43
+  Sw/GT                 0.25
+==================================================
+

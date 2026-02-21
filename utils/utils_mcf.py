@@ -107,9 +107,11 @@ class MOTGraphSingle:
             else:
                 cost = 1e5
             
-            if cost <= self.param["stitch_thresh"]:  # new edge points from new_id to existing nodes, with postive cost
+            if cost <= self.param["stitch_thresh"]:  # new edge points from new_id to existing nodes, with positive cost
                 fgmt_id = fgmt[self.attr]
-                self.G.add_edge(new_id, fgmt_id, weight = self.param["stitch_thresh"]-cost, match = False)
+                margin = self.param["stitch_thresh"] - cost
+                weight_gain = float(self.param.get("weight_gain", 1.0))
+                self.G.add_edge(new_id, fgmt_id, weight=weight_gain * margin, match=False)
         
         # add Fragment pointer to cache
         self.in_graph_deque.append(fragment)

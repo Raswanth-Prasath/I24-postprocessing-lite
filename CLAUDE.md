@@ -37,6 +37,12 @@ Replace the `stitch_cost()` function in `utils/utils_stitcher_cost.py` with lear
    - Use `Logistic Regression/lr_diagnostics.py --eval-protocol {random,source_holdout,both}` for evidence.
    - Diagnostics are flag-only: no automatic point dropping/reweighting in production by default.
 
+12. **CLI Flag Integrity Rule**:
+   - When giving shell one-liners, keep each long option as a single token (example: `--selection-metric`, never `--selection- metric`).
+
+13. **Exact Name Preservation Rule**:
+   - If the user specifies a tag or filename spelling, preserve it exactly in commands and follow-up guidance.
+
 
 
 ---
@@ -134,6 +140,7 @@ I24-postprocessing-lite/
 ├── Core Pipeline Files
 │   ├── pp_lite.py             # Main orchestrator with --config/--tag CLI (230 lines)
 │   ├── run_experiments.py     # Batch experiment runner (130 lines)
+│   ├── calibrate_threshold.py # Auto stitch_thresh calibration via ROC (~200 lines)
 │   ├── merge.py               # Fragment merging (481 lines)
 │   ├── min_cost_flow.py       # Stitch stage (142 lines)
 │   ├── reconciliation.py      # Trajectory smoothing (223 lines)
@@ -178,6 +185,7 @@ I24-postprocessing-lite/
 | **MOT Evaluation** | `mot_i24.py` | ✅ MOTA/MOTP/IDF1 across 3 scenarios |
 | **LR Baseline** | `Logistic Regression/train_torch_lr.py` | ✅ PyTorch implementation |
 | **Config** | `parameters.json` | ✅ cost_function section added |
+| **Threshold Calibration** | `calibrate_threshold.py` | ✅ ROC-based auto-calibration across scenarios |
 
 ### Recently Fixed (Feb 4, 2026)
 
@@ -205,6 +213,7 @@ I24-postprocessing-lite/
 | Component | Planned File | Notes |
 |-----------|--------------|-------|
 | ~~Unified feature extractor~~ | `utils/features_stitch.py` | ✅ Now implemented |
+| ~~Threshold calibration~~ | `calibrate_threshold.py` | ✅ ROC-based auto-calibration |
 | MLP with features | `models/mlp_features.py` | Could use LR features |
 | Siamese Transformer | `models/siamese_transformer.py` | Future work |
 | TCN | `models/tcn.py` | Future work |
@@ -559,6 +568,31 @@ python evaluate_siamese.py
 1. Run `python pp_lite.py i --config parameters_LR.json --tag LR`
 2. If JSON issues, run: `python diagnose_json.py REC_i_LR.json --fix`
 3. Run `python mot_i24.py i`
+
+### Calibrate Stitch Threshold
+```bash
+# Find optimal stitch_thresh for a cost function via ROC on GT-labeled pairs
+python calibrate_threshold.py --config parameters_PINN.json
+python calibrate_threshold.py --config parameters_PINN.json --scenarios i ii
+python calibrate_threshold.py --config parameters.json --scenarios i ii iii
+```
+
+### PINNv2 Reproducibility + Diagnostics
+```bash
+# Recreate PINNv2 from dedicated pinned config
+python pp_lite.py i --config parameters_PINNv2.json --tag v2_recreated
+
+# Evaluate explicit output
+python hota_trackeval.py --gt-file GT_i.json --tracker-file REC_i_v2_recreated.json --name v2_recreated
+
+# Diagnose PINNv2 rank/cost separation directly from checkpoint
+python models/diagnose_rank_costs.py --checkpoint models/outputs/pinn_model_v2.pth --dataset models/outputs/transformer_ranking_dataset.jsonl --split val --model-type pinn
+```
+
+**PINNv2 note (2026-02-21):**
+- `parameters_PINNv2.json` pins `models/outputs/pinn_model_v2.pth` for reproducible reruns.
+- On `GT_ii` and `GT_iii`, `PINNv2` outperformed Bhattacharyya in HOTA/MOTA/IDF1 and reduced Sw/GT.
+- For the v2 checkpoint, `physics_total` remains the recommended runtime mapping; `neg_logit` and `softplus_neg_logit` showed poor class separation in offline diagnostics and should not be enabled without retraining.
 
 ### Diagnose/Fix JSON Issues
 ```bash

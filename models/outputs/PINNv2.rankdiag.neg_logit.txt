@@ -1,0 +1,53 @@
+Checkpoint: models/outputs/pinn_model_v2.pth
+Dataset: models/outputs/transformer_ranking_dataset.jsonl
+Device: cuda
+
+Loaded 13711 val pairs
+Resolved model type: pinn
+PINN runtime: score_mapping=neg_logit, logit_temperature=1.0, logit_bias=0.0, time_penalty=0.0, calibration_mode=off
+
+
+Array sizes: raw_scores=13711, gt_labels=13711, sp_costs=13711, bhat_costs=13711
+Processed 13711 pairs (377 positive, 13048 negative, 286 unknown)
+
+============================================================
+PINN COSTS (final MCF costs after selected mapping/calibration)
+============================================================
+
+  POSITIVE (n=377):
+    min=-0.1439  p5=-0.1063  p25=-0.0721  median=-0.0400  p75=-0.0107  p95=0.0265  max=0.0507
+
+  NEGATIVE (n=13048):
+    min=-0.2066  p5=-0.1243  p25=-0.0835  median=-0.0571  p75=-0.0303  p95=0.0043  max=0.0753
+
+============================================================
+BHATTACHARYYA COSTS (for comparison)
+============================================================
+
+  POSITIVE (n=377):
+    min=0.0953  p5=0.1449  p25=0.2257  median=0.4825  p75=1.1380  p95=2.8560  max=7.1868
+
+  NEGATIVE (n=13048):
+    min=0.6344  p5=5.4701  p25=25.2941  median=62.6075  p75=198.8001  p95=2550.9664  max=96669.5441
+
+============================================================
+SEPARATION ANALYSIS
+============================================================
+
+  MCF cost ranges:
+    Positive: [-0.1439, 0.0507]
+    Negative: [-0.2066, 0.0753]
+    Overlap zone: [-0.1439, 0.0507]
+
+  Suggested stitch_thresh (from positive percentiles):
+    p90(positive)=0.0200  →  TP=89.9%, FP=98.2%
+    p95(positive)=0.0265  →  TP=95.0%, FP=99.0%
+    p99(positive)=0.0424  →  TP=98.9%, FP=99.8%
+
+  Threshold sweep:
+          thresh     TP%     FP%  precision  avg_pos_margin
+         -0.0400  50.1%  66.5%      0.021           0.035
+         -0.0107  75.1%  88.6%      0.024           0.048
+          0.0200  89.9%  98.2%      0.026           0.069
+          0.0265  95.0%  99.0%      0.027           0.071
+          0.0424  98.9%  99.8%      0.028           0.084

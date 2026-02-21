@@ -21,6 +21,19 @@ import reconciliation as rec
 import merge
 
 
+def _stdout_status(message):
+    """Emit status lines that are always visible via stdout/tee."""
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[PP-LITE {ts}] {message}", flush=True)
+
+
+def _safe_qsize(queue_obj):
+    try:
+        return queue_obj.qsize()
+    except Exception:
+        return -1
+
+
 
 def main(raw_collection=None, reconciled_collection=None, config=None):
 
@@ -37,6 +50,8 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
     
     if reconciled_collection:
         parameters["reconciled_collection"] = reconciled_collection
+
+    output_filename = parameters["reconciled_collection"] + ".json"
     
     db_param = None
         
@@ -49,6 +64,14 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
     # CREATE A MANAGER
     mp_manager = mp.Manager()
     manager_logger.info("Post-processing manager has PID={}".format(os.getpid()))
+    _stdout_status(
+        "START pid={} raw={} output={} heartbeat={}s".format(
+            os.getpid(),
+            parameters["raw_collection"],
+            output_filename,
+            HB,
+        )
+    )
 
     # SHARED DATA STRUCTURES
     mp_param = mp_manager.dict()
@@ -120,20 +143,24 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
         subsys_process.start()
         pid_tracker[proc_name] = subsys_process.pid
         master_proc_map[proc_name]["process"] = subsys_process # Process object cannot be pickled, thus local_proc_map cannot be a mp_manager.dict()
+        _stdout_status(f"STARTED {proc_name} pid={subsys_process.pid}")
 
         
     start = time.time()
     begin = start
+    exit_reason = "unknown"
     try:
         while True:
             now = time.time()
             if now - begin > 14400 and all([q.empty() for _,q in master_queues_map.items()]): # 4hr
                 manager_logger.info("Master processes exceed running for 4hr and all queues are empty.")
+                exit_reason = "timeout_4hr_all_queues_empty"
                 break
 
             if now - begin > 20 and all([q.empty() for _,q in master_queues_map.items()]) and \
             not any([master_proc_map[proc]["process"].is_alive() for proc in master_proc_map]):
                 manager_logger.info("Master processes complete in {} sec.".format(now-begin))
+                exit_reason = "all_processes_complete"
                 break
 
 
@@ -156,10 +183,39 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
                         subsys_process.start()
                         pid_tracker[proc_name] = subsys_process.pid
                         master_proc_map[proc_name]["process"] = subsys_process
+                        _stdout_status(f"RESURRECT {proc_name} pid={subsys_process.pid}")
 
             # Heartbeat queue sizes
             now = time.time()
             if now - start > HB:
+                alive_names = [
+                    proc_name
+                    for proc_name, proc_info in master_proc_map.items()
+                    if proc_info["process"].is_alive()
+                ]
+                queue_sizes = {
+                    proc_name: _safe_qsize(q)
+                    for proc_name, q in master_queues_map.items()
+                }
+                non_empty_queues = {
+                    proc_name: size
+                    for proc_name, size in queue_sizes.items()
+                    if size > 0
+                }
+                if non_empty_queues:
+                    queue_summary = ", ".join(
+                        [f"{proc_name}:{size}" for proc_name, size in sorted(non_empty_queues.items())]
+                    )
+                else:
+                    queue_summary = "all_empty"
+                _stdout_status(
+                    "HEARTBEAT elapsed={}s alive={}/{} queues={}".format(
+                        int(now - begin),
+                        len(alive_names),
+                        len(master_proc_map),
+                        queue_summary,
+                    )
+                )
                 for proc_name, q in master_queues_map.items():
                     if not q.empty():
                         manager_logger.info("Queue size for {}: {}".format(proc_name,
@@ -173,9 +229,10 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
     finally:
         # Graceful shutdown: terminate and join all processes
         manager_logger.info("Initiating graceful shutdown...")
+        _stdout_status("SHUTDOWN initiating")
 
         # Wait for processes to finish naturally (with timeout)
-        shutdown_timeout = 10  # seconds
+        shutdown_timeout = 30  # seconds
         shutdown_start = time.time()
 
         for proc_name, proc_info in master_proc_map.items():
@@ -185,6 +242,7 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
                 proc.join(timeout=remaining_time)
                 if proc.is_alive():
                     manager_logger.warning(f"Force terminating {proc_name}")
+                    _stdout_status(f"SHUTDOWN force_terminate {proc_name} pid={proc.pid}")
                     proc.terminate()
                     proc.join(timeout=1)
 
@@ -195,6 +253,17 @@ def main(raw_collection=None, reconciled_collection=None, config=None):
             pass  # Manager may already be shut down
 
         manager_logger.info("MASTER Postprocessing Mischief Managed.")
+        output_exists = os.path.exists(output_filename)
+        output_size = os.path.getsize(output_filename) if output_exists else 0
+        _stdout_status(
+            "DONE reason={} elapsed={}s output={} exists={} size_bytes={}".format(
+                exit_reason,
+                int(time.time() - begin),
+                output_filename,
+                output_exists,
+                output_size,
+            )
+        )
     
     
     

@@ -1,0 +1,56 @@
+Checkpoint: models/outputs/pinn_model_v2.pth
+Dataset: models/outputs/transformer_ranking_dataset.jsonl
+Device: cuda
+
+Loaded 13711 val pairs
+Resolved model type: pinn
+PINN runtime: score_mapping=softplus_neg_logit, logit_temperature=1.0, logit_bias=0.0, time_penalty=0.0, calibration_mode=off
+
+
+Array sizes: raw_scores=13711, gt_labels=13711, sp_costs=13711, bhat_costs=13711
+Processed 13711 pairs (377 positive, 13048 negative, 286 unknown)
+
+============================================================
+PINN COSTS (final MCF costs after selected mapping/calibration)
+============================================================
+
+  POSITIVE (n=377):
+    min=0.7267  p5=0.7445  p25=0.7600  median=0.7714  p75=0.7830  p95=0.7973  max=0.8187
+
+  NEGATIVE (n=13048):
+    min=0.6683  p5=0.7260  p25=0.7532  median=0.7684  p75=0.7825  p95=0.8039  max=0.8443
+
+============================================================
+BHATTACHARYYA COSTS (for comparison)
+============================================================
+
+  POSITIVE (n=377):
+    min=0.0953  p5=0.1449  p25=0.2257  median=0.4825  p75=1.1380  p95=2.8560  max=7.1868
+
+  NEGATIVE (n=13048):
+    min=0.6344  p5=5.4701  p25=25.2941  median=62.6075  p75=198.8001  p95=2550.9664  max=96669.5441
+
+============================================================
+SEPARATION ANALYSIS
+============================================================
+
+  MCF cost ranges:
+    Positive: [0.7267, 0.8187]
+    Negative: [0.6683, 0.8443]
+    Overlap zone: [0.7267, 0.8187]
+
+  Suggested stitch_thresh (from positive percentiles):
+    p90(positive)=0.7926  →  TP=89.9%, FP=87.9%
+    p95(positive)=0.7973  →  TP=95.0%, FP=91.4%
+    p99(positive)=0.8062  →  TP=98.9%, FP=96.1%
+
+  Threshold sweep:
+          thresh     TP%     FP%  precision  avg_pos_margin
+          2.0000  100.0%  100.0%      0.028           1.229
+          2.5000  100.0%  100.0%      0.028           1.729
+          3.0000  100.0%  100.0%      0.028           2.229
+          3.5000  100.0%  100.0%      0.028           2.729
+          4.0000  100.0%  100.0%      0.028           3.229
+          4.5000  100.0%  100.0%      0.028           3.729
+          5.0000  100.0%  100.0%      0.028           4.229
+          6.0000  100.0%  100.0%      0.028           5.229

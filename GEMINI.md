@@ -39,6 +39,16 @@ The pipeline consists of three primary stages:
 
 ---
 
+## PINNv2 Update (Feb 21, 2026)
+
+- Reproducibility config added: `parameters_PINNv2.json` (pinned checkpoint: `models/outputs/pinn_model_v2.pth`).
+- Scenario `ii` vs Bhattacharyya: HOTA `0.577` vs `0.554`, MOTA `0.846` vs `0.814`, IDF1 `0.827` vs `0.787`, Sw/GT `0.03` vs `0.10`.
+- Scenario `iii` vs Bhattacharyya: HOTA `0.435` vs `0.403`, MOTA `0.640` vs `0.617`, IDF1 `0.603` vs `0.548`, Sw/GT `0.39` vs `0.65`.
+- `models/diagnose_rank_costs.py` supports PINN checkpoint diagnostics (`--model-type pinn`, `--score-mapping`, calibration args).
+- For `pinn_model_v2.pth`, keep runtime mapping as `physics_total`; logit-based mappings (`neg_logit`, `softplus_neg_logit`) showed poor separation for this checkpoint.
+
+---
+
 ## Building and Running
 
 ### Environment Setup
@@ -59,6 +69,15 @@ source activate i24
 - **Batch Experiments:**
   ```bash
   python run_experiments.py --all-configs --all-suffixes --evaluate
+  ```
+- **Calibrate Stitch Threshold:**
+  ```bash
+  python calibrate_threshold.py --config parameters_PINN.json --scenarios i ii iii
+  ```
+- **Recreate PINNv2 (pinned config):**
+  ```bash
+  python pp_lite.py i --config parameters_PINNv2.json --tag v2_recreated
+  python hota_trackeval.py --gt-file GT_i.json --tracker-file REC_i_v2_recreated.json --name v2_recreated
   ```
 
 ---
@@ -122,8 +141,14 @@ conda activate i24 && python models/train_transformer_ranking.py \
 
 ---
 
+## Calibration Results (Feb 20, 2026)
+
+- `calibrate_threshold.py`: ROC-based auto-calibration of `stitch_thresh` for any cost function.
+- PINN scenario i: optimal_thresh=2.806 (TPR=0.925, FPR=0.024), 18,659 pairs.
+- Current `stitch_thresh=3` is near-optimal for PINN on scenario i.
+
 ## Key Directory Structure
-- `/`: Main pipeline entry and benchmarking.
+- `/`: Main pipeline entry, benchmarking, and threshold calibration.
 - `/utils/`: Core utilities, `StitchCostFunction` ABC, and feature extractors.
 - `/Logistic Regression/`: Training and artifacts for the LR model.
 - `/Siamese-Network/`: BiLSTM similarity model implementation.

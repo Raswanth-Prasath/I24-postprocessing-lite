@@ -1,0 +1,30 @@
+============================================================
+TrackEval Metrics for explicit files: PINN_LOGIT_NEG
+============================================================
+Loaded 313 GT trajectories, 543 tracker trajectories
+
+==================================================
+  Results for PINN_LOGIT_NEG
+==================================================
+  Metric               Value
+  ------------------------------
+  HOTA                 0.296
+  DetA                 0.278
+  AssA                 0.336
+  LocA                 0.673
+  MOTA                 0.481
+  MOTP                 0.531
+  IDF1                 0.302
+  IDR                  0.256
+  IDP                  0.368
+  Precision            0.849
+  Recall               0.589
+  IDsw                   302
+  FP                   12720
+  FN                   49775
+  Frag                   381
+  No. trajs              543
+  Fgmt/GT               1.73
+  Sw/GT                 0.96
+==================================================
+

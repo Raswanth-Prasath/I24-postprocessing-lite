@@ -1,0 +1,56 @@
+Checkpoint: models/outputs/pinn_model_v3.pth
+Dataset: models/outputs/transformer_ranking_dataset.jsonl
+Device: cuda
+
+Loaded 13711 val pairs
+Resolved model type: pinn
+PINN runtime: score_mapping=physics_total, logit_temperature=1.0, logit_bias=0.0, time_penalty=0.0, calibration_mode=off
+
+
+Array sizes: raw_scores=13711, gt_labels=13711, sp_costs=13711, bhat_costs=13711
+Processed 13711 pairs (377 positive, 13048 negative, 286 unknown)
+
+============================================================
+PINN COSTS (final MCF costs after selected mapping/calibration)
+============================================================
+
+  POSITIVE (n=377):
+    min=1.6628  p5=2.6987  p25=4.1644  median=5.8345  p75=7.3911  p95=9.9509  max=13.3229
+
+  NEGATIVE (n=13048):
+    min=5.7086  p5=11.9174  p25=17.4170  median=23.9331  p75=33.1275  p95=49.5702  max=84.4988
+
+============================================================
+BHATTACHARYYA COSTS (for comparison)
+============================================================
+
+  POSITIVE (n=377):
+    min=0.0953  p5=0.1449  p25=0.2257  median=0.4825  p75=1.1380  p95=2.8560  max=7.1868
+
+  NEGATIVE (n=13048):
+    min=0.6344  p5=5.4701  p25=25.2941  median=62.6075  p75=198.8001  p95=2550.9664  max=96669.5441
+
+============================================================
+SEPARATION ANALYSIS
+============================================================
+
+  MCF cost ranges:
+    Positive: [1.6628, 13.3229]
+    Negative: [5.7086, 84.4988]
+    Overlap zone: [5.7086, 13.3229]
+
+  Suggested stitch_thresh (from positive percentiles):
+    p90(positive)=8.8266  →  TP=89.9%, FP=0.4%
+    p95(positive)=9.9509  →  TP=95.0%, FP=1.4%
+    p99(positive)=12.1581  →  TP=98.9%, FP=5.6%
+
+  Threshold sweep:
+          thresh     TP%     FP%  precision  avg_pos_margin
+          2.0000   0.8%   0.0%      1.000           0.241
+          2.5000   3.4%   0.0%      1.000           0.349
+          3.0000   8.0%   0.0%      1.000           0.503
+          3.5000  13.5%   0.0%      1.000           0.673
+          4.0000  21.8%   0.0%      1.000           0.832
+          4.5000  28.4%   0.0%      1.000           1.081
+          5.0000  35.0%   0.0%      1.000           1.337
+          6.0000  52.5%   0.0%      0.995           1.730

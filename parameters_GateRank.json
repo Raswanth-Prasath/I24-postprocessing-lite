@@ -34,14 +34,15 @@
         "mx": 0.1,
         "cy": 2,
         "my": 0.1,
-        "stitch_thresh": 3,
-        "master_stitch_thresh": 4,
+        "stitch_thresh": 0.79,
+        "master_stitch_thresh": 1.0,
         "residual_threshold_x": 5,
         "residual_threshold_y": 1,
         "conf_threshold": 0.1
     },
     "cost_function": {
         "type": "gate_rank",
+        "gate_thresh": 3.0,
         "gate": {
             "type": "bhattacharyya"
         },

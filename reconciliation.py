@@ -12,6 +12,7 @@ After done processing, each worker send results back to the parent process using
 # -----------------------------
 import multiprocessing
 from multiprocessing import Pool
+import signal
 import time
 import os
 import queue
@@ -137,6 +138,28 @@ def write_reconciled_to_db(parameters, db_param, reconciled_queue):
     begin = time.time()
 
     output_filename = parameters["reconciled_collection"]+".json"
+
+    # Install SIGTERM handler so force-termination from pp_lite.py still
+    # closes the JSON array cleanly instead of truncating mid-write.
+    _sigterm_received = [False]
+    _output_file_ref = [None]  # will hold the open file handle
+
+    def _sigterm_handler(signum, frame):
+        _sigterm_received[0] = True
+        reconciled_writer.warning("SIGTERM received — closing JSON file gracefully")
+        fh = _output_file_ref[0]
+        if fh and not fh.closed:
+            try:
+                fh.write("]")
+                fh.flush()
+                fh.close()
+            except Exception:
+                pass
+        reconciled_writer.info(f"JSON writer closed via SIGTERM. Total written: {cntr}")
+        os._exit(0)
+
+    signal.signal(signal.SIGTERM, _sigterm_handler)
+
     file_exists = os.path.exists(output_filename)
     append_flag = file_exists and os.stat(output_filename).st_size > 0
 
@@ -164,6 +187,7 @@ def write_reconciled_to_db(parameters, db_param, reconciled_queue):
     # Open output file once, keep it open for all writes
     file_mode = 'a' if append_flag else 'w'
     output_file = open(output_filename, file_mode)
+    _output_file_ref[0] = output_file  # expose to SIGTERM handler
     first_write = not append_flag  # False when appending to ensure comma before first new record
 
     try:
